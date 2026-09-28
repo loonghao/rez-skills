@@ -9,6 +9,7 @@ on:
       - ".github/scripts/validate_codex_install.py"
       - ".github/scripts/validate_plugin.py"
       - ".github/scripts/validate_skill_commands.py"
+      - ".github/scripts/validate_skill_semantics.py"
       - "scripts/install_codex.py"
       - ".github/workflows/sync-skills.yml"
   push:
@@ -19,6 +20,7 @@ on:
       - ".github/scripts/validate_codex_install.py"
       - ".github/scripts/validate_plugin.py"
       - ".github/scripts/validate_skill_commands.py"
+      - ".github/scripts/validate_skill_semantics.py"
       - "scripts/install_codex.py"
   release:
     types: [published]
@@ -98,6 +100,41 @@ jobs:
         run: |
           set -euo pipefail
           python .github/scripts/validate_skill_commands.py --strict
+
+  # The static lane above only proves that a flag exists; the flags it knows
+  # about are read from the same rez CLI this pin installs. This lane is the
+  # other half: it runs the documented commands against a throwaway package
+  # repository and asserts on what comes back, which is the only way to catch a
+  # command that is made entirely of real flags and still means nothing.
+  validate-skill-semantics:
+    name: Execute documented rez commands
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # The script refuses to run when the installed rez disagrees, so the pin
+      # and the skills stay in step.
+      REZ_VERSION: "3.4.0"
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install pinned rez
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check "rez==$REZ_VERSION"
+          rez --version
+      - name: Run the documented commands against a fixture repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/validate_skill_semantics.py
 
   discover:
     needs: validate-plugin

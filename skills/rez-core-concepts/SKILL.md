@@ -232,6 +232,6 @@ Use `rez-context` for non-interactive inspection — see the `rez-cli` skill.
 ## Agent workflow
 
 1. Inspect before guessing: `rez-config packages_path`, `rez-search <pkg>`, `rez-status`.
-2. Narrow the read — `rez-context --so`, `rez-search --format` — instead of dumping everything.
+2. Narrow the read — `rez-context --so`, `rez-search <pkg> --latest` — instead of dumping everything.
 3. Reproduce a resolve without entering a shell: `rez-env <reqs> --output context.rxt`.
 4. If a resolve fails, go to the `rez-resolve` skill; do not guess at the cause.
