@@ -33,7 +33,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Validate the agent plugin manifest and every skill
         shell: bash
         run: |
@@ -52,7 +52,7 @@ jobs:
       REZ_VERSION: "3.4.0"
     steps:
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -84,7 +84,7 @@ jobs:
       # The plugin root is the repository root, so skills/ stays the single source
       # of truth for both `claude plugin install` and the ClawHub publish below.
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: List skill directories
         id: list
         shell: bash
@@ -127,7 +127,7 @@ jobs:
       PUBLISH: ${{ github.event_name != 'pull_request' }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
