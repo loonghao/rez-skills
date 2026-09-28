@@ -4,12 +4,16 @@ on:
   pull_request:
     paths:
       - "skills/**"
+      - ".claude-plugin/**"
       - ".github/scripts/validate_clawhub_publish.py"
+      - ".github/scripts/validate_plugin.py"
       - ".github/workflows/sync-skills.yml"
   push:
     branches: [main]
     paths:
       - "skills/**"
+      - ".claude-plugin/**"
+      - ".github/scripts/validate_plugin.py"
   release:
     types: [published]
   workflow_dispatch:
@@ -19,7 +23,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  validate-plugin:
+    name: Validate plugin layout
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Validate the agent plugin manifest and every skill
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/validate_plugin.py --strict
+
   discover:
+    needs: validate-plugin
     name: Discover skills
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -29,6 +49,8 @@ jobs:
       skills: ${{ steps.list.outputs.skills }}
       count: ${{ steps.list.outputs.count }}
     steps:
+      # The plugin root is the repository root, so skills/ stays the single source
+      # of truth for both `claude plugin install` and the ClawHub publish below.
       - name: Checkout source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: List skill directories

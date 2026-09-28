@@ -6,7 +6,9 @@ package and environment manager used in VFX/animation pipelines.
 Source material: the Rez repository — `docs/source/*.rst` and `src/rez/**` (notably
 `solver.py`, `rezconfig.py`, `rex.py`, `build_system.py`, `cli/_util.py`).
 
-`skills/` is the **canonical source**. Project-level agent directories (`.agents/`, `.claude/`,
+`skills/` is the **canonical source**, and the repository root is an **agent plugin**:
+`.claude-plugin/plugin.json` names it and `.claude-plugin/marketplace.json` lists it, so installing
+the plugin installs every skill below in one step. Project-level agent directories (`.agents/`, `.claude/`,
 `.cursor/`, and friends) are compatibility snapshots generated from it, not independently
 maintained sources.
 
@@ -38,17 +40,22 @@ These skills teach agents to be precise, scoped, and token-aware:
 ## Structure
 
 ```
-skills/
-├── README.md                          # This file
-├── rez-core-concepts/SKILL.md
-├── rez-package-definition/SKILL.md
-├── rez-package-commands/SKILL.md
-├── rez-resolve/SKILL.md
-├── rez-cli/SKILL.md
-└── rez-config-plugins/SKILL.md
+rez-skills/                            # plugin root
+├── .claude-plugin/
+│   ├── plugin.json                    # plugin manifest
+│   └── marketplace.json               # marketplace catalog
+└── skills/
+    ├── README.md                      # This file
+    ├── rez-core-concepts/SKILL.md
+    ├── rez-package-definition/SKILL.md
+    ├── rez-package-commands/SKILL.md
+    ├── rez-resolve/SKILL.md
+    ├── rez-cli/SKILL.md
+    └── rez-config-plugins/SKILL.md
 ```
 
-Each `SKILL.md` carries YAML frontmatter with `name` and `description` only.
+Each `SKILL.md` carries YAML frontmatter with `name` and `description` only. The `name` must
+match the skill's directory name — `.github/scripts/validate_plugin.py` enforces both.
 
 ## Skill Routing Guide
 
@@ -86,18 +93,27 @@ User's question:
 ## Install
 
 ```bash
-# Via ClawHub CLI
-clawhub install loonghao/rez
+# Agent plugin — installs every skill at once (recommended)
+claude plugin marketplace add loonghao/rez-skills
+claude plugin install rez@rez-skills
 
-# Or copy skills/ into your AI agent's skills directory
+# Load a clone for a single session
+claude --plugin-dir ./rez-skills
+
+# Via ClawHub CLI, per skill
+clawhub install loonghao/rez
 ```
+
+With the plugin enabled, each skill is namespaced under the plugin name, for example
+`/rez:rez-resolve`.
 
 ## CI Publishing to ClawHub
 
 `skills/` is published to ClawHub by `.github/workflows/sync-skills.yml`.
 
-- Pull requests touching `skills/**` run a **dry run** of `clawhub skill publish` and validate the
-  receipt — no credentials required, no publish.
+- Pull requests touching `skills/**` or `.claude-plugin/**` first validate the plugin layout with
+  `.github/scripts/validate_plugin.py --strict`, then run a **dry run** of `clawhub skill publish`
+  and validate the receipt — no credentials required, no publish.
 - Merges to `main` that touch `skills/**`, published releases, and manual dispatch run the real
   publish.
 - The real publish requires the repository secret `CLAWHUB_TOKEN`.
