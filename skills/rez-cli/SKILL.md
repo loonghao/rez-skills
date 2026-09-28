@@ -162,11 +162,11 @@ rez-context context.rxt              # info about a saved context
 | `--which CMD` | which package provides a command |
 | `-g, --graph` / `-d, --dependency-graph` | dot graphs |
 | `--pg, --print-graph` / `--wg, --write-graph FILE` | compact / written graph |
-| `--pp, --prune-package PKG` | remove a package and re-resolve |
+| `--pp, --prune-package PKG` | prune the displayed graph down to `PKG` (graph output only, no re-resolve) |
 | `-i, --interpret` | show the interpreted shell code |
 | `-f, --format FMT` | output in a given shell format |
 | `--diff RXT` | diff against another context |
-| `--no-env` | suppress environment variable output |
+| `--no-env` | interpret the context in an empty environment |
 | `--fetch` | fetch missing packages |
 
 `rez-context --so` and `rez-context --which` are the two cheapest answers to "what did I actually

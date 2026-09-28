@@ -19,7 +19,8 @@ State model:
 - A **phase** is one state of the solve; it holds a list of **scopes**.
 - A **scope** is one package request plus the list of variants matching it.
 
-Five operations drive a phase:
+Five operations drive a phase (EXTRACT, MERGE-EXTRACTIONS, INTERSECT, ADD, REDUCE). A sixth,
+SPLIT, is the **cross-phase** operation that runs when a phase can go no further:
 
 | Operation | What happens |
 |---|---|
@@ -160,9 +161,17 @@ Memcached (`memcached_uri`) can back both. If a resolve returns something imposs
 
 ## Timestamps
 
-Resolves carry a timestamp, so a resolve is reproducible later. `REZ_USED_REQUESTED_TIMESTAMP`
-pins it; `REZ_USED_TIMESTAMP` reports what was used. `warn_untimestamped` / `warn_all` surface
-packages that resolved without one.
+Resolves carry a timestamp, so a resolve is reproducible later.
+
+To **pin** a resolve to a point in time, pass `rez-env -t/--time` (epoch time such as `1393014494`,
+or a relative time such as `-10s`, `-5m`, `-0.5h`, `-10d`). That is the input that controls the
+solve — it ignores packages released after the given time.
+
+`REZ_USED_TIMESTAMP` and `REZ_USED_REQUESTED_TIMESTAMP` are **outputs only** — Rez sets them in the
+resolved environment, and nothing reads them back to influence a later solve. Exporting them by
+hand will **not** reproduce a historical resolve; use `-t/--time` for that.
+
+`warn_untimestamped` / `warn_all` surface packages that resolved without one.
 
 ## Useful knobs
 
@@ -170,7 +179,7 @@ packages that resolved without one.
 |---|---|---|
 | `resolve_caching` | `True` | cache resolves |
 | `variant_select_mode` | `version_priority` | variant preference strategy |
-| `implicit_packages` | platform/arch/os | weak system constraints |
+| `implicit_packages` | `~platform=={system.platform}`, `~arch=={system.arch}`, `~os=={system.os}` | weak system constraints |
 | `package_filter` | `None` | hide packages from resolves |
 | `error_on_missing_variant_requires` | `True` | fail on incomplete variant requirements |
 | `memcached_uri` | `[]` | back the caches with memcached |

@@ -76,7 +76,7 @@ default_relocatable_per_package = DelayLoad('/svr/configs/rez_relocs.yaml')
 | `local_packages_path` | `~/packages` | where `rez-build --install` lands |
 | `release_packages_path` | `~/.rez/packages/int` | where `rez-release` deploys |
 | `cache_packages_path` | `None` | package cache location |
-| `implicit_packages` | platform/arch/os | weak system constraints |
+| `implicit_packages` | `~platform=={system.platform}`, `~arch=={system.arch}`, `~os=={system.os}` | weak system constraints |
 | `variant_select_mode` | `version_priority` | variant preference strategy |
 | `plugin_path` | `[]` | where to find `rezplugins` |
 | `package_filter` | `None` | hide packages from resolves |
