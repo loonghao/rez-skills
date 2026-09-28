@@ -26,9 +26,31 @@ rez-env <reqs> -o -                    # or write it to stdout
 The stored `.rxt` keeps `failure_description`, so you can re-inspect it later with `rez-context`:
 
 ```bash
-rez-context -i context.rxt --so                 # what was requested, and the source order
-rez-context -i context.rxt --dependency-graph   # dot graph of the failed resolve
+rez-context context.rxt --so            # what was requested, and the source order
+rez-context context.rxt --print-graph   # dot graph of the failed resolve
 ```
+
+Two traps in that pair, both verified against `src/rez/cli/context.py`:
+
+- **`-i` is `--interpret` on `rez-context`, not `--input`** (it *is* `--input` on `rez-env`, so the
+  same short flag means opposite things on the two commands). Passing `-i` sends the call down the
+  interpret branch, where `--so` and the graph flags are skipped, and a failed context raises
+  `ResolvedContextError: Cannot perform operation in a failed context` — the one case this skill
+  exists for.
+- **`--dependency-graph` needs a solved context**, because it calls `get_dependency_graph()`. Use
+  `--print-graph` (or `--pg`), which calls `rc.graph()` and works on a failed resolve. On a failed
+  context it prints the `CONFLICT` edge directly:
+
+  ```text
+  digraph g {
+  _1 [fillcolor="#F6F6F6", fontsize="10", style="filled,dashed", label="python-2"];
+  _2 [fillcolor="#F6F6F6", fontsize="10", style="filled,dashed", label="!python-2"];
+  _1 -> _2 [arrowsize="1", color="red", fontcolor="red", style="bold", label="CONFLICT"];
+  }
+  ```
+
+  `-g` / `--graph` and `-d` / `--dependency-graph` both fail here; `--graph` additionally needs
+  Graphviz `dot` on `PATH`.
 
 ## Step 1 — read what rez already told you
 
@@ -71,7 +93,7 @@ Work through the causes cheapest-first. Each has one command that confirms it.
 | 2 | **Package conflict** | `(maya-2019 <--!--> !maya-2019)` — different packages, or an explicit `!` | `rez-depends A`, `rez-depends B` |
 | 3 | **Implicit package** | conflict mentions `platform`, `arch`, `os`; or a package vanishes only on this machine | `rez-env <reqs> --ni` |
 | 4 | **Variant selection** | wrong variant chosen, or variant subpath missing | `rez-config variant_select_mode`, `rez-env <reqs> -v` |
-| 5 | **Total reduction / no candidates** | no conflict edge; `The context failed to resolve` with no named pair | `rez-search <pkg> --format`, `rez-env --no-filters` |
+| 5 | **Total reduction / no candidates** | no conflict edge; `The context failed to resolve` with no named pair | `rez-search '<pkg>-*'`, `rez-env --no-filters` |
 | 6 | **Package or version not found** | `PackageFamilyNotFoundError` / `PackageNotFoundError` | `rez-search <pkg>`, `rez-config packages_path` |
 
 Also rule out a **stale cache** before anything else — see the last section.
@@ -90,7 +112,7 @@ down to the conflict; `rez-depends <pkg>` is the reverse lookup that confirms it
 direction — it lists the packages that depend on `<pkg>`. Then:
 
 - **Loosen the tighter request.** `foo-1.2+<1.3` may be stricter than reality requires — a range like
-  `foo-1.2+<2` often resolves. Check what actually exists with `rez-search foo --format`.
+  `foo-1.2+<2` often resolves. Check what actually exists with `rez-search 'foo-*'`.
 - **Use a weak reference** when you want "if present, it must be in this range" rather than a hard
   requirement: `rez-env foo '~nuke-9.rc2'`. This is how DCC packages constrain an embedded python
   without forcing it into every environment.
@@ -181,12 +203,22 @@ If every variant of a scope is removed there is no conflict edge to print, so th
 empty. The candidates were eliminated one by one. Find out what *does* exist:
 
 ```bash
-rez-search <pkg> --format              # every version rez can see
-rez-search <pkg> --latest              # just the newest
+rez-search '<pkg>-*'                   # every version rez can see
+rez-search '<pkg>-*' --latest          # just the newest
+rez-search '<pkg>-*' -f '{qualified_name}'   # just the names, one per line
 rez-env <reqs> --no-filters            # retry with package filters disabled
 rez-env <reqs> --exclude '*.beta'      # reproduce a filter locally
 rez-env <reqs> --paths <path>          # retry against a specific search path
 ```
+
+Two `rez-search` details that matter here:
+
+- **A bare name searches the family, not the versions.** With the default `--type auto`, `rez-search
+  <pkg>` lists the *package family* — one line — and cannot show you which versions exist. Add a
+  version range: `rez-search '<pkg>-*'`.
+- **`-f` / `--format` takes an argument.** It is `-f FORMAT`, not a boolean flag; `rez-search <pkg>
+  --format` exits 2 with `expected one argument`. It only changes the output template. `--latest`
+  likewise only has an effect when you are searching packages, so pair it with a range.
 
 Package filters hide packages from resolves: a package is excluded when it matches an exclusion rule
 and no inclusion rule. A filter can be set globally via the `package_filter` setting, applied per
@@ -228,7 +260,10 @@ rez-env <reqs> -v                      # solver steps; -vv / -vvv for more
 rez-env <reqs> --stats                 # advanced solver stats
 ```
 
-Two caches are easy to blame wrongly:
+Two caches are easy to blame wrongly. **Check whether caching is even on first**: `resolve_caching`
+defaults to `True` but does nothing unless `memcached_uri` is configured, and that defaults to `[]`.
+So on a stock install there is no resolve cache to be stale — confirm with
+`rez-config memcached_uri` before chasing this cause.
 
 - **Resolve caching** (`resolve_caching`, default `True`, backed by `memcached_uri`) — a cached
   resolve can be returned **stale**: its timestamp is the original one. Symptom: rez returns a
@@ -240,7 +275,8 @@ Two caches are easy to blame wrongly:
   `REZ_<PKG>_ORIG_ROOT` keeps the original. Disable per command with `--no-pkg-cache`.
 
 If a resolve returns something impossible, **retry with `--no-cache` before reading any solver
-output**.
+output** — it is one flag and costs nothing, but only skip past this cause if `memcached_uri` is
+actually set.
 
 ## Triage cheat sheet
 
@@ -250,8 +286,8 @@ rez-env <reqs> -o context.rxt                  # store even a failed resolve
 rez-env <reqs> --no-cache -o context.rxt       # ...with the cache out of the way
 
 # read it
-rez-context -i context.rxt --so                # request + source order
-rez-context -i context.rxt --dependency-graph  # dot graph
+rez-context context.rxt --so                   # request + source order
+rez-context context.rxt --print-graph          # dot graph of the failed resolve
 rez-env <reqs> --fail-graph                    # rendered failure graph
 rez-env <reqs> --max-fails 5                   # more than the first failure
 
@@ -259,7 +295,7 @@ rez-env <reqs> --max-fails 5                   # more than the first failure
 rez-env <reqs> --ni                            # implicit packages?
 rez-env <reqs> --nl                            # local packages?
 rez-env <reqs> --no-filters                    # package filters?
-rez-search <pkg> --format                      # what exists?
+rez-search '<pkg>-*'                           # what versions exist?
 rez-depends <pkg>                              # who requires it?
 rez-config packages_path                       # where is rez looking?
 

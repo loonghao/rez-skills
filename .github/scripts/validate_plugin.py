@@ -94,7 +94,7 @@ def validate_plugin_manifest(validator: Validator) -> None:
                 validator.error(f"plugin.json: '{field}' points at a missing path: {path}")
 
 
-def validate_marketplace_manifest(validator: Validator, skill_count: int) -> None:
+def validate_marketplace_manifest(validator: Validator, skill_dirs: list[str]) -> None:
     manifest = load_json(MARKETPLACE_MANIFEST, validator)
     if manifest is None:
         return
@@ -131,21 +131,38 @@ def validate_marketplace_manifest(validator: Validator, skill_count: int) -> Non
         if not (REPO_ROOT / source).is_dir():
             validator.error(f"marketplace.json: source does not exist: {source}")
 
-    # The workflow publishes every directory under skills/; the plugin must ship them all.
-    if skill_count:
-        print(f"marketplace.json lists {len(plugins)} plugin(s), skills/ holds {skill_count} skill(s)")
+    # The workflow publishes every directory under skills/, so the marketplace must expose a
+    # plugin whose source covers each one. Otherwise skills ship to ClawHub but not to anyone
+    # who installs the plugin.
+    sources = [
+        (REPO_ROOT / entry["source"]).resolve()
+        for entry in plugins
+        if isinstance(entry, dict) and isinstance(entry.get("source"), str)
+    ]
+    for skill in skill_dirs:
+        skill_path = (SKILLS_DIR / skill).resolve()
+        if not any(skill_path.is_relative_to(source) for source in sources):
+            validator.error(
+                f"skills/{skill} is not covered by any marketplace plugin source, "
+                f"so it would publish to ClawHub but not install with the plugin"
+            )
+
+    print(f"marketplace.json lists {len(plugins)} plugin(s), covering {len(skill_dirs)} skill(s)")
 
 
-def validate_skills(validator: Validator) -> int:
-    """Check every directory the ClawHub workflow would discover and publish."""
+def validate_skills(validator: Validator) -> list[str]:
+    """Check every directory the ClawHub workflow would discover and publish.
+
+    Returns the skill directory names that were checked.
+    """
     if not SKILLS_DIR.is_dir():
         validator.error("the skills/ directory does not exist")
-        return 0
+        return []
 
     dirs = sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir())
     if not dirs:
         validator.error("no skill directories found under skills/")
-        return 0
+        return []
 
     for skill_dir in dirs:
         skill_md = skill_dir / "SKILL.md"
@@ -181,7 +198,7 @@ def validate_skills(validator: Validator) -> int:
         if not description_match or not description_match.group(1).strip().strip("\"'"):
             validator.error(f"{rel}/SKILL.md frontmatter is missing 'description'")
 
-    return len(dirs)
+    return [d.name for d in dirs]
 
 
 def main() -> int:
@@ -194,9 +211,9 @@ def main() -> int:
     args = parser.parse_args()
 
     validator = Validator()
-    skill_count = validate_skills(validator)
+    skill_dirs = validate_skills(validator)
     validate_plugin_manifest(validator)
-    validate_marketplace_manifest(validator, skill_count)
+    validate_marketplace_manifest(validator, skill_dirs)
 
     for warning in validator.warnings:
         print(f"::warning::{warning}")
@@ -205,7 +222,7 @@ def main() -> int:
 
     status = "failed" if validator.errors else "passed"
     suffix = " with warnings" if validator.warnings and not validator.errors else ""
-    print(f"Plugin validation {status}{suffix}: {skill_count} skill(s) checked")
+    print(f"Plugin validation {status}{suffix}: {len(skill_dirs)} skill(s) checked")
 
     if validator.errors:
         return 1
