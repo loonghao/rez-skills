@@ -33,11 +33,21 @@ Ordering rules (tokens compared left to right):
 
 | Order | Rule |
 |---|---|
-| 1 | `_` before everything |
-| 2 | letters before numbers |
-| 3 | uppercase before lowercase (`A` < `a`) |
-| 4 | zero-padded numbers before less-padded (`02` < `2`, `002` < `02`) |
-| 5 | mixed tokens split into letter/number groups and compared with the same rules |
+| 1 | letters before numbers (`a` < `1`) |
+| 2 | among letters: `A`–`Z` < `_` < `a`–`z` (`A` < `a`, and `_` sits **between** them) |
+| 3 | zero-padded numbers before less-padded (`02` < `2`, `002` < `02`) |
+| 4 | mixed tokens split into letter/number groups and compared with the same rules |
+
+Alpha sub-tokens are compared with Python's native string comparison, so ordering follows ASCII
+code points: `A`–`Z` (65–90) < `_` (95) < `a`–`z` (97–122). That makes the full ordering:
+
+```text
+sorted(['_', 'A', 'Z', 'a', 'z', '0', '9'], key=Version)
+-> ['A', 'Z', '_', 'a', 'z', '0', '9']
+```
+
+`_` is **not** before everything — it comes after uppercase but before lowercase, so
+`1.0.rc_1 > 1.0.RC1` while `1.0.rc_1 < 1.0.rca`.
 
 Gotchas that matter in practice:
 
@@ -47,11 +57,14 @@ Gotchas that matter in practice:
   semver ordering does **not** apply: `foo-1.0.0 < foo-1.0.0-beta.1` in Rez.
 
 > **Trust the code over the docs here.** The ordering table in Rez's own `basic_concepts.rst` has
-> two errors: it claims `a` < `A` and `13` > `043`. Running `rez.version._version.Version` shows the
-> opposite — `A` < `a` and `13` < `043`. When a version-ordering question matters, verify with:
+> **one** error: it claims `a` < `A`, but `A` < `a` in reality. Its other twelve rows — including
+> `13` < `043` — are correct. The same mistake appears in the `AlphanumericVersionToken` docstring
+> in `src/rez/version/_version.py`, which states alphas compare "`_`, then A-Z, then a-z". Since a
+> **source docstring** gets this wrong too, treat the class itself as the only reliable benchmark
+> and verify any ordering question that matters:
 >
 > ```bash
-> python -c "from rez.version._version import Version; print(Version('1.0.0') < Version('1.0.0-beta.1'))"
+> python -c "from rez.version._version import Version; print(sorted(['_','A','a'], key=Version))"
 > ```
 
 ## Package requests
