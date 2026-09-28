@@ -33,7 +33,9 @@ These skills teach agents to be precise, scoped, and token-aware:
 | **rez-core-concepts** | Packages, versions, requests, repositories, search path, implicits, variants, ephemerals | "What is Rez?", version/request semantics, where packages come from |
 | **rez-package-definition** | `package.py` authoring — attributes, `@early`/`@late`, `requires`, `build_requires`, variants | Writing or reviewing a package definition |
 | **rez-package-commands** | The `commands()` section and rex API — `env`, expansion, execution order, build branching | Setting env vars, exposing tools, build-time behavior |
-| **rez-resolve** | Solver internals, `-v` debug output, conflicts/cycles/reductions, graphs, caching | Resolve failures, unexpected versions or variants |
+| **rez-resolve** | Solver internals, `-v` debug output, conflicts/cycles/reductions, graphs, caching | "How does the solver work?", reading `-v` traces |
+| **rez-resolve-troubleshooting** | Diagnosing resolve failures — six causes, the command that confirms each, cache and filter pitfalls | "The context failed to resolve", a conflict to attribute, a package rez will not use |
+| **rez-package-authoring** | Authoring rules and decisions — version vs. variant, range width, `requires`/`variants`/`commands`, build/release loop, anti-patterns | Writing or reviewing a `package.py`, deciding whether a change needs a new version or variant |
 | **rez-cli** | Command reference — `rez-env`, `rez-build`, `rez-release`, `rez-context`, `rez-search`, flags | "What is the command for…", build/release/test loops |
 | **rez-config-plugins** | Config layering, merge rules, key settings, the seven plugin types and discovery | Configuring rez, writing or installing plugins |
 
@@ -50,6 +52,8 @@ rez-skills/                            # plugin root
     ├── rez-package-definition/SKILL.md
     ├── rez-package-commands/SKILL.md
     ├── rez-resolve/SKILL.md
+    ├── rez-resolve-troubleshooting/SKILL.md
+    ├── rez-package-authoring/SKILL.md
     ├── rez-cli/SKILL.md
     └── rez-config-plugins/SKILL.md
 ```
@@ -65,9 +69,13 @@ User's question:
 │  → rez-core-concepts
 ├─ Writing or reviewing package.py / requires / variants / @early / @late
 │  → rez-package-definition
+├─ Version vs. variant decision / range width / authoring rules and anti-patterns
+│  → rez-package-authoring
 ├─ commands() / env vars / PATH / PYTHONPATH / string expansion / rex
 │  → rez-package-commands
-├─ Resolve failed / wrong version / unexpected variant / conflict
+├─ Resolve failed / a conflict to attribute / a package rez will not use
+│  → rez-resolve-troubleshooting
+├─ How the solver works / reading -v traces / solver internals
 │  → rez-resolve
 ├─ "What is the command for…?" / build / release / test loop / flags
 │  → rez-cli
@@ -80,9 +88,12 @@ User's question:
 | User's question | Recommended skill |
 |---|---|
 | "How do rez versions sort?" | rez-core-concepts |
-| "Why did I get foo-1.2 instead of foo-1.3?" | rez-resolve |
-| "The context failed to resolve" | rez-resolve |
+| "Why did I get foo-1.2 instead of foo-1.3?" | rez-resolve-troubleshooting |
+| "The context failed to resolve" | rez-resolve-troubleshooting |
+| "Which package pulled in this conflicting version?" | rez-resolve-troubleshooting |
 | "How do I declare a build-only dependency?" | rez-package-definition |
+| "Should this be a new version or a new variant?" | rez-package-authoring |
+| "How wide should this dependency range be?" | rez-package-authoring |
 | "How do I add python to PATH?" | rez-package-commands |
 | "How do I build and install locally?" | rez-cli |
 | "How do I release a package?" | rez-cli |

@@ -9,7 +9,7 @@ description: "Rez command-line reference — rez-env, rez-build, rez-release, re
 > resolve with `rez-env`, build with `rez-build`, ship with `rez-release`, inspect with `rez-context`.
 
 Skill scope: commands and flags. For concepts see `rez-core-concepts`; for resolve failures see
-`rez-resolve`.
+`rez-resolve-troubleshooting`.
 
 ## Full command list
 
