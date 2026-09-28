@@ -35,7 +35,7 @@ Ordering rules (tokens compared left to right):
 |---|---|
 | 1 | `_` before everything |
 | 2 | letters before numbers |
-| 3 | lowercase before uppercase (`a` < `A`) |
+| 3 | uppercase before lowercase (`A` < `a`) |
 | 4 | zero-padded numbers before less-padded (`02` < `2`, `002` < `02`) |
 | 5 | mixed tokens split into letter/number groups and compared with the same rules |
 
@@ -45,6 +45,14 @@ Gotchas that matter in practice:
 - Longer shared-prefix wins: `1.0.0` > `1.0`.
 - **No special meaning** for `alpha`/`beta`/`rc`. Semver is *encouraged but not enforced*, and
   semver ordering does **not** apply: `foo-1.0.0 < foo-1.0.0-beta.1` in Rez.
+
+> **Trust the code over the docs here.** The ordering table in Rez's own `basic_concepts.rst` has
+> two errors: it claims `a` < `A` and `13` > `043`. Running `rez.version._version.Version` shows the
+> opposite — `A` < `a` and `13` < `043`. When a version-ordering question matters, verify with:
+>
+> ```bash
+> python -c "from rez.version._version import Version; print(Version('1.0.0') < Version('1.0.0-beta.1'))"
+> ```
 
 ## Package requests
 
