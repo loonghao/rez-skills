@@ -49,8 +49,11 @@ Two traps in that pair, both verified against `src/rez/cli/context.py`:
   }
   ```
 
-  `-g` / `--graph` and `-d` / `--dependency-graph` both fail here; `--graph` additionally needs
-  Graphviz `dot` on `PATH`.
+  Of the other graph flags: `-d` / `--dependency-graph` also fails, because it calls
+  `get_dependency_graph()`, which is decorated `@_on_success`. But `-g` / `--graph` is fine — it uses
+  `rc.graph()`, the same undecorated call as `--print-graph`, so it does render the failure graph. It
+  just needs Graphviz `dot` on `PATH`, and fails with `FileNotFoundError` when it is missing; that is
+  an environment problem, not a failed-context one.
 
 ## Step 1 — read what rez already told you
 
@@ -93,7 +96,7 @@ Work through the causes cheapest-first. Each has one command that confirms it.
 | 2 | **Package conflict** | `(maya-2019 <--!--> !maya-2019)` — different packages, or an explicit `!` | `rez-depends A`, `rez-depends B` |
 | 3 | **Implicit package** | conflict mentions `platform`, `arch`, `os`; or a package vanishes only on this machine | `rez-env <reqs> --ni` |
 | 4 | **Variant selection** | wrong variant chosen, or variant subpath missing | `rez-config variant_select_mode`, `rez-env <reqs> -v` |
-| 5 | **Total reduction / no candidates** | no conflict edge; `The context failed to resolve` with no named pair | `rez-search '<pkg>-*'`, `rez-env --no-filters` |
+| 5 | **Total reduction / no candidates** | no conflict edge; `The context failed to resolve` with no named pair | `rez-search <pkg>`, `rez-env --no-filters` |
 | 6 | **Package or version not found** | `PackageFamilyNotFoundError` / `PackageNotFoundError` | `rez-search <pkg>`, `rez-config packages_path` |
 
 Also rule out a **stale cache** before anything else — see the last section.
@@ -112,7 +115,7 @@ down to the conflict; `rez-depends <pkg>` is the reverse lookup that confirms it
 direction — it lists the packages that depend on `<pkg>`. Then:
 
 - **Loosen the tighter request.** `foo-1.2+<1.3` may be stricter than reality requires — a range like
-  `foo-1.2+<2` often resolves. Check what actually exists with `rez-search 'foo-*'`.
+  `foo-1.2+<2` often resolves. Check what actually exists with `rez-search foo`.
 - **Use a weak reference** when you want "if present, it must be in this range" rather than a hard
   requirement: `rez-env foo '~nuke-9.rc2'`. This is how DCC packages constrain an embedded python
   without forcing it into every environment.
@@ -203,22 +206,45 @@ If every variant of a scope is removed there is no conflict edge to print, so th
 empty. The candidates were eliminated one by one. Find out what *does* exist:
 
 ```bash
-rez-search '<pkg>-*'                   # every version rez can see
-rez-search '<pkg>-*' --latest          # just the newest
-rez-search '<pkg>-*' -f '{qualified_name}'   # just the names, one per line
+rez-search <pkg>                       # every version rez can see
+rez-search <pkg> --latest              # just the newest
+rez-search <pkg> -f '{qualified_name}' # just the names, one per line
+rez-search 'foo<2'                     # narrow by a real version range
 rez-env <reqs> --no-filters            # retry with package filters disabled
 rez-env <reqs> --exclude '*.beta'      # reproduce a filter locally
 rez-env <reqs> --paths <path>          # retry against a specific search path
 ```
 
-Two `rez-search` details that matter here:
+Three `rez-search` rules that matter here, all verified against a real repository:
 
-- **A bare name searches the family, not the versions.** With the default `--type auto`, `rez-search
-  <pkg>` lists the *package family* — one line — and cannot show you which versions exist. Add a
-  version range: `rez-search '<pkg>-*'`.
+- **A bare name already lists every version.** With the default `--type auto`, `rez-search <pkg>`
+  resolves to a single family and lists all of its versions:
+
+  ```text
+  $ rez-search foo
+  foo-1.0.0
+  foo-1.1.0
+  foo-2.0.0
+  ```
+
+  You do **not** need to add a version range to list versions.
+- **`<pkg>-*` is not a version range, and matches nothing.** `foo-*` is not a valid requirement, so
+  `package_search.py` falls back to treating the whole string as a glob on the *family name*, and
+  `fnmatch('foo', 'foo-*')` is false. It returns `No matching family found` (exit 1) on every
+  repository, which looks like "the package doesn't exist" but is the pattern never matching.
+
+  | To do this | Write |
+  |---|---|
+  | list every version of one package | `rez-search foo` |
+  | narrow to a range | `rez-search 'foo-1'` / `rez-search 'foo<2'` |
+  | list versions across several families | `rez-search 'foo*' --type package` |
+
+  A glob that matches **one** family still degrades correctly to versions (`rez-search 'f*'` lists
+  the `foo` versions), but a glob matching **two or more** families degrades to a family list
+  (`rez-search '*'` prints `bar` and `foo`). Force versions with `--type package`.
 - **`-f` / `--format` takes an argument.** It is `-f FORMAT`, not a boolean flag; `rez-search <pkg>
   --format` exits 2 with `expected one argument`. It only changes the output template. `--latest`
-  likewise only has an effect when you are searching packages, so pair it with a range.
+  works with a bare name: `rez-search foo --latest` prints `foo-2.0.0`.
 
 Package filters hide packages from resolves: a package is excluded when it matches an exclusion rule
 and no inclusion rule. A filter can be set globally via the `package_filter` setting, applied per
@@ -295,7 +321,7 @@ rez-env <reqs> --max-fails 5                   # more than the first failure
 rez-env <reqs> --ni                            # implicit packages?
 rez-env <reqs> --nl                            # local packages?
 rez-env <reqs> --no-filters                    # package filters?
-rez-search '<pkg>-*'                           # what versions exist?
+rez-search <pkg>                              # what versions exist?
 rez-depends <pkg>                              # who requires it?
 rez-config packages_path                       # where is rez looking?
 
