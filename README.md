@@ -66,10 +66,21 @@ publishing each skill directory exactly as before.
 ## Validation
 
 ```bash
-python3 .github/scripts/validate_plugin.py --strict
+python3 .github/scripts/validate_plugin.py --strict     # plugin + marketplace manifests, skill layout
+pip install "rez==3.4.0"
+python3 .github/scripts/validate_skill_commands.py --strict
 ```
 
-The script checks the plugin and marketplace manifests and every skill directory under `skills/`.
+`validate_plugin.py` checks the plugin and marketplace manifests and every skill directory under
+`skills/`.
+
+`validate_skill_commands.py` checks the commands those skills tell an agent to run. It pulls every
+`rez-*` invocation out of the fenced shell blocks **and** the inline `` `code` `` spans of every
+`skills/*/SKILL.md`, and checks each command and flag against the parser of the installed rez —
+including the options rez registers with `help=argparse.SUPPRESS` (`-v/--verbose`, `--debug`,
+`--profile`), which `rez-env --help` never prints — then runs `rez-<cmd> --help` for the seven core
+subcommands. In CI this is the `Smoke-test documented rez commands` job of
+`.github/workflows/sync-skills.yml`, pinned to rez 3.4.0 through its `REZ_VERSION`.
 
 ## Publishing
 
