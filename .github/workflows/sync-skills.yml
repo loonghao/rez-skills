@@ -1,0 +1,225 @@
+name: Sync Skills to ClawHub
+
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - ".github/scripts/validate_clawhub_publish.py"
+      - ".github/workflows/sync-skills.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/**"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: sync-skills-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  discover:
+    name: Discover skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      skills: ${{ steps.list.outputs.skills }}
+      count: ${{ steps.list.outputs.count }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: List skill directories
+        id: list
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -d skills ]]; then
+            echo "::error::The skills/ directory does not exist."
+            exit 1
+          fi
+          mapfile -t dirs < <(find skills -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          if [[ ${#dirs[@]} -eq 0 ]]; then
+            echo "::error::No skill directories found under skills/."
+            exit 1
+          fi
+          printf '%s\n' "${dirs[@]}"
+          {
+            echo "count=${#dirs[@]}"
+            printf 'skills='
+            printf '%s\n' "${dirs[@]}" | jq -R . | jq -sc .
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: ${{ github.event_name == 'pull_request' && 'Dry run' || 'Publish' }} ${{ matrix.skill }}
+    needs: discover
+    if: ${{ github.event_name != 'release' || github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        skill: ${{ fromJson(needs.discover.outputs.skills) }}
+    env:
+      CLAWHUB_CLI_VERSION: "0.23.3"
+      CLAWHUB_DISABLE_TELEMETRY: "1"
+      SKILL_PATH: skills/${{ matrix.skill }}
+      SKILL_SLUG: ${{ matrix.skill }}
+      PUBLISH: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Install pinned ClawHub CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global --ignore-scripts --no-audit --no-fund \
+            "clawhub@$CLAWHUB_CLI_VERSION"
+          [[ "$(clawhub --cli-version)" == "$CLAWHUB_CLI_VERSION" ]]
+
+      - name: Verify source provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          [[ -z "$(git status --short)" ]]
+
+      - name: Require merged manual publish source
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Manual ClawHub publishes must run from refs/heads/main."
+            exit 1
+          fi
+
+      - name: Require publish credentials
+        if: ${{ env.PUBLISH == 'true' }}
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLAWHUB_TOKEN:-}" ]]; then
+            echo "::error::Real ClawHub publishes require the CLAWHUB_TOKEN repository secret."
+            exit 1
+          fi
+
+      - name: Write ephemeral ClawHub configuration
+        if: ${{ env.PUBLISH == 'true' }}
+        env:
+          CLAWHUB_CONFIG_PATH: ${{ runner.temp }}/clawhub-config.json
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          fs.writeFileSync(
+            process.env.CLAWHUB_CONFIG_PATH,
+            JSON.stringify({ registry: "https://clawhub.ai", token: process.env.CLAWHUB_TOKEN }) + "\n",
+            { mode: 0o600 },
+          );
+          NODE
+
+      - name: Preview and optionally publish the skill
+        env:
+          CLAWHUB_CONFIG_PATH: ${{ runner.temp }}/clawhub-config.json
+          PREVIEW_PATH: ${{ runner.temp }}/clawhub-preview.json
+          RECEIPT_PATH: ${{ runner.temp }}/clawhub-publish.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            skill publish "$SKILL_PATH"
+            --owner loonghao
+            --tags latest
+            --source-repo "$GITHUB_REPOSITORY"
+            --source-commit "$GITHUB_SHA"
+            --source-ref "$GITHUB_REF"
+            --source-path "$SKILL_PATH"
+            --json
+          )
+
+          # The dry run needs no credentials and proves the packaging chain works.
+          clawhub "${args[@]}" --dry-run > "$PREVIEW_PATH"
+          python3 .github/scripts/validate_clawhub_publish.py \
+            "$PREVIEW_PATH" \
+            --mode dry-run \
+            --expected-slug "$SKILL_SLUG"
+
+          if [[ "$PUBLISH" != "true" ]]; then
+            cp "$PREVIEW_PATH" "$RECEIPT_PATH"
+            exit 0
+          fi
+
+          # Skip the network round trip when the public bundle already matches.
+          if node -e '
+            const receipt = require(process.env.PREVIEW_PATH);
+            const publiclyCurrent =
+              receipt.status === "unchanged" && receipt.version === receipt.latestVersion;
+            process.exit(publiclyCurrent ? 0 : 1);
+          '; then
+            cp "$PREVIEW_PATH" "$RECEIPT_PATH"
+            exit 0
+          fi
+
+          publish_version="$(node -p 'require(process.env.PREVIEW_PATH).version')"
+          catalog_args=()
+          if node -e '
+            const receipt = require(process.env.PREVIEW_PATH);
+            const firstPublish = receipt.status === "would-publish" && receipt.latestVersion === null;
+            process.exit(firstPublish ? 0 : 1);
+          '; then
+            catalog_args=(
+              --categories developer-tools,documentation
+              --topics rez,package-manager,vfx,dependency-resolution,environment-management
+            )
+          fi
+
+          clawhub "${args[@]}" --version "$publish_version" \
+            "${catalog_args[@]}" > "$RECEIPT_PATH"
+
+      - name: Validate ClawHub receipt
+        env:
+          MODE: ${{ github.event_name == 'pull_request' && 'dry-run' || 'publish' }}
+          PREVIEW_PATH: ${{ runner.temp }}/clawhub-preview.json
+          RECEIPT_PATH: ${{ runner.temp }}/clawhub-publish.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/validate_clawhub_publish.py \
+            "$RECEIPT_PATH" \
+            --mode "$MODE" \
+            --expected-slug "$SKILL_SLUG" \
+            --preview "$PREVIEW_PATH"
+
+      - name: Remove ephemeral ClawHub configuration
+        if: ${{ always() && env.PUBLISH == 'true' }}
+        env:
+          CLAWHUB_CONFIG_PATH: ${{ runner.temp }}/clawhub-config.json
+        shell: bash
+        run: rm -f -- "$CLAWHUB_CONFIG_PATH"
+
+      - name: Preserve ClawHub receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: clawhub-${{ github.event_name }}-${{ matrix.skill }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/clawhub-preview.json
+            ${{ runner.temp }}/clawhub-publish.json
+          if-no-files-found: warn
+          retention-days: 30
