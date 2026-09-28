@@ -151,7 +151,7 @@ Rules:
 - **Put build information behind `if building:`** so consumers find headers and CMake config at build
   time without polluting the runtime environment.
 - **`commands()` never runs for the package being built.** Use `pre_build_commands()` for that.
-- **Expose tools with `tools`**, not by hand-managing `PATH`, so `rez-env --tools` and the tool
+- **Expose tools with `tools`**, not by hand-managing `PATH`, so `rez-context --tools` and the tool
   conflict detection work.
 - **Keep it cheap.** Anything that can be computed once should be an `@early()` attribute; use
   `@late()` only for values that genuinely depend on runtime state (env vars, user role).
