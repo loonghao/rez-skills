@@ -1,6 +1,6 @@
 ---
 name: rez-resolve
-description: "Rez resolve and solver internals — how the solver works, reading -v debug output, diagnosing conflicts, cycles and total reductions, graph inspection, patching, caching and timestamps. Use when rez-env or rez-build fails to resolve, resolves surprisingly, or the user asks why a package version or variant was chosen. Covers Rez 3.4.0."
+description: "Rez resolve and solver internals — how the solver works, reading -v debug output, conflicts, cycles and total reductions, graph inspection, patching, caching and timestamps. Use when the user asks how the solver works or how to read its -v output. For a resolve that already failed and needs attributing, use rez-resolve-troubleshooting. Covers Rez 3.4.0."
 ---
 
 # Rez resolve and solver
@@ -9,8 +9,9 @@ description: "Rez resolve and solver internals — how the solver works, reading
 > exactly one variant; if it cannot, it reports the failure reason — a conflict, a cycle, or a
 > total reduction.
 
-Skill scope: resolving and debugging resolves. For request/version syntax see `rez-core-concepts`;
-for the CLI surface see `rez-cli`.
+Skill scope: how the solver works and how to read its output. For request/version syntax see
+`rez-core-concepts`; for the CLI surface see `rez-cli`. For a failing resolve you need to attribute,
+see `rez-resolve-troubleshooting`.
 
 ## The algorithm
 

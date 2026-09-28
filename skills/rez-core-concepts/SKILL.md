@@ -11,7 +11,8 @@ description: "Rez core concepts — packages, versions, requests, repositories, 
 
 Reference: [Rez](https://github.com/AcademySoftwareFoundation/rez) 3.4.0.
 Skill scope: concepts only. For `package.py` authoring see `rez-package-definition`,
-for `commands()` see `rez-package-commands`, for failures see `rez-resolve`.
+for `commands()` see `rez-package-commands`, for resolve mechanics see `rez-resolve`,
+for resolve failures see `rez-resolve-troubleshooting`.
 
 ## Mental model
 

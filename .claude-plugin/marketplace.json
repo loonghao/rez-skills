@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "rez-skills",
+  "description": "Agent-friendly skills for Rez, the package and environment manager used in VFX and animation pipelines.",
+  "owner": {
+    "name": "loonghao",
+    "url": "https://github.com/loonghao"
+  },
+  "plugins": [
+    {
+      "name": "rez",
+      "source": "./",
+      "description": "Rez package and environment management skills: core concepts, package.py authoring, commands(), the CLI, configuration and plugins, resolve internals, resolve-failure triage, and package authoring rules."
+    }
+  ]
+}

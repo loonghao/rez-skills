@@ -9,7 +9,8 @@ description: "Authoring Rez package.py files — standard attributes, early/late
 > `requires` declares dependencies and `commands()` configures the runtime environment.
 
 Skill scope: the definition file itself. For the `commands()` body see `rez-package-commands`;
-for requests/version syntax see `rez-core-concepts`; for builds see `rez-cli`.
+for requests/version syntax see `rez-core-concepts`; for builds see `rez-cli`. For the decisions behind
+versions, variants, range width and the build/release loop see `rez-package-authoring`.
 
 ## Minimal package
 

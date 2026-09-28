@@ -6,7 +6,9 @@ package and environment manager used in VFX/animation pipelines.
 Source material: the Rez repository — `docs/source/*.rst` and `src/rez/**` (notably
 `solver.py`, `rezconfig.py`, `rex.py`, `build_system.py`, `cli/_util.py`).
 
-`skills/` is the **canonical source**. Project-level agent directories (`.agents/`, `.claude/`,
+`skills/` is the **canonical source**, and the repository root is an **agent plugin**:
+`.claude-plugin/plugin.json` names it and `.claude-plugin/marketplace.json` lists it, so installing
+the plugin installs every skill below in one step. Project-level agent directories (`.agents/`, `.claude/`,
 `.cursor/`, and friends) are compatibility snapshots generated from it, not independently
 maintained sources.
 
@@ -31,24 +33,33 @@ These skills teach agents to be precise, scoped, and token-aware:
 | **rez-core-concepts** | Packages, versions, requests, repositories, search path, implicits, variants, ephemerals | "What is Rez?", version/request semantics, where packages come from |
 | **rez-package-definition** | `package.py` authoring — attributes, `@early`/`@late`, `requires`, `build_requires`, variants | Writing or reviewing a package definition |
 | **rez-package-commands** | The `commands()` section and rex API — `env`, expansion, execution order, build branching | Setting env vars, exposing tools, build-time behavior |
-| **rez-resolve** | Solver internals, `-v` debug output, conflicts/cycles/reductions, graphs, caching | Resolve failures, unexpected versions or variants |
+| **rez-resolve** | Solver internals, `-v` debug output, conflicts/cycles/reductions, graphs, caching | "How does the solver work?", reading `-v` traces |
+| **rez-resolve-troubleshooting** | Diagnosing resolve failures — six causes, the command that confirms each, cache and filter pitfalls | "The context failed to resolve", a conflict to attribute, a package rez will not use |
+| **rez-package-authoring** | Authoring rules and decisions — version vs. variant, range width, `requires`/`variants`/`commands`, build/release loop, anti-patterns | Writing or reviewing a `package.py`, deciding whether a change needs a new version or variant |
 | **rez-cli** | Command reference — `rez-env`, `rez-build`, `rez-release`, `rez-context`, `rez-search`, flags | "What is the command for…", build/release/test loops |
 | **rez-config-plugins** | Config layering, merge rules, key settings, the seven plugin types and discovery | Configuring rez, writing or installing plugins |
 
 ## Structure
 
 ```
-skills/
-├── README.md                          # This file
-├── rez-core-concepts/SKILL.md
-├── rez-package-definition/SKILL.md
-├── rez-package-commands/SKILL.md
-├── rez-resolve/SKILL.md
-├── rez-cli/SKILL.md
-└── rez-config-plugins/SKILL.md
+rez-skills/                            # plugin root
+├── .claude-plugin/
+│   ├── plugin.json                    # plugin manifest
+│   └── marketplace.json               # marketplace catalog
+└── skills/
+    ├── README.md                      # This file
+    ├── rez-core-concepts/SKILL.md
+    ├── rez-package-definition/SKILL.md
+    ├── rez-package-commands/SKILL.md
+    ├── rez-resolve/SKILL.md
+    ├── rez-resolve-troubleshooting/SKILL.md
+    ├── rez-package-authoring/SKILL.md
+    ├── rez-cli/SKILL.md
+    └── rez-config-plugins/SKILL.md
 ```
 
-Each `SKILL.md` carries YAML frontmatter with `name` and `description` only.
+Each `SKILL.md` carries YAML frontmatter with `name` and `description` only. The `name` must
+match the skill's directory name — `.github/scripts/validate_plugin.py` enforces both.
 
 ## Skill Routing Guide
 
@@ -58,9 +69,13 @@ User's question:
 │  → rez-core-concepts
 ├─ Writing or reviewing package.py / requires / variants / @early / @late
 │  → rez-package-definition
+├─ Version vs. variant decision / range width / authoring rules and anti-patterns
+│  → rez-package-authoring
 ├─ commands() / env vars / PATH / PYTHONPATH / string expansion / rex
 │  → rez-package-commands
-├─ Resolve failed / wrong version / unexpected variant / conflict
+├─ Resolve failed / a conflict to attribute / a package rez will not use
+│  → rez-resolve-troubleshooting
+├─ How the solver works / reading -v traces / solver internals
 │  → rez-resolve
 ├─ "What is the command for…?" / build / release / test loop / flags
 │  → rez-cli
@@ -73,9 +88,12 @@ User's question:
 | User's question | Recommended skill |
 |---|---|
 | "How do rez versions sort?" | rez-core-concepts |
-| "Why did I get foo-1.2 instead of foo-1.3?" | rez-resolve |
-| "The context failed to resolve" | rez-resolve |
+| "Why did I get foo-1.2 instead of foo-1.3?" | rez-resolve-troubleshooting |
+| "The context failed to resolve" | rez-resolve-troubleshooting |
+| "Which package pulled in this conflicting version?" | rez-resolve-troubleshooting |
 | "How do I declare a build-only dependency?" | rez-package-definition |
+| "Should this be a new version or a new variant?" | rez-package-authoring |
+| "How wide should this dependency range be?" | rez-package-authoring |
 | "How do I add python to PATH?" | rez-package-commands |
 | "How do I build and install locally?" | rez-cli |
 | "How do I release a package?" | rez-cli |
@@ -86,18 +104,27 @@ User's question:
 ## Install
 
 ```bash
-# Via ClawHub CLI
-clawhub install loonghao/rez
+# Agent plugin — installs every skill at once (recommended)
+claude plugin marketplace add loonghao/rez-skills
+claude plugin install rez@rez-skills
 
-# Or copy skills/ into your AI agent's skills directory
+# Load a clone for a single session
+claude --plugin-dir ./rez-skills
+
+# Via ClawHub CLI, per skill
+clawhub install loonghao/rez
 ```
+
+With the plugin enabled, each skill is namespaced under the plugin name, for example
+`/rez:rez-resolve`.
 
 ## CI Publishing to ClawHub
 
 `skills/` is published to ClawHub by `.github/workflows/sync-skills.yml`.
 
-- Pull requests touching `skills/**` run a **dry run** of `clawhub skill publish` and validate the
-  receipt — no credentials required, no publish.
+- Pull requests touching `skills/**` or `.claude-plugin/**` first validate the plugin layout with
+  `.github/scripts/validate_plugin.py --strict`, then run a **dry run** of `clawhub skill publish`
+  and validate the receipt — no credentials required, no publish.
 - Merges to `main` that touch `skills/**`, published releases, and manual dispatch run the real
   publish.
 - The real publish requires the repository secret `CLAWHUB_TOKEN`.
