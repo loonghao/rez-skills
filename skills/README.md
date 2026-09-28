@@ -46,6 +46,8 @@ rez-skills/                            # plugin root
 ├── .claude-plugin/
 │   ├── plugin.json                    # plugin manifest
 │   └── marketplace.json               # marketplace catalog
+├── scripts/
+│   └── install_codex.py               # Codex CLI installer / uninstaller
 └── skills/
     ├── README.md                      # This file
     ├── rez-core-concepts/SKILL.md
@@ -111,12 +113,44 @@ claude plugin install rez@rez-skills
 # Load a clone for a single session
 claude --plugin-dir ./rez-skills
 
+# Codex CLI — install this tree into a Codex skills directory
+git clone https://github.com/loonghao/rez-skills.git
+cd rez-skills
+python3 scripts/install_codex.py              # user level: $CODEX_HOME/skills
+python3 scripts/install_codex.py --project    # ./.codex/skills of the repo you run it in
+python3 scripts/install_codex.py --uninstall  # remove exactly what was installed
+
 # Via ClawHub CLI, per skill
 clawhub install loonghao/rez
 ```
 
 With the plugin enabled, each skill is namespaced under the plugin name, for example
 `/rez:rez-resolve`.
+
+### Codex CLI
+
+Codex reads `<skills-dir>/<skill>/SKILL.md`, so `scripts/install_codex.py` links (POSIX) or copies
+(Windows) **each skill directory individually** into `$CODEX_HOME/skills` — or `~/.codex/skills`
+when `CODEX_HOME` is unset — and `--project` targets `.codex/skills` of the repository you run it
+from. Both `--mode copy` and `--mode symlink` are available; the default links where possible and
+falls back to copies. Re-running it is a no-op for links and refreshes copies, so `git pull` in the
+clone is enough to update.
+
+`--uninstall` removes only what the installer added and leaves your other skills alone. It is driven
+by a receipt, `<skills-dir>/.rez-skills.json`; skills it does not recognise are refused at install
+time unless you pass `--force`, and left in place at uninstall time.
+
+A Codex skills directory is an **install target**, not a source: `--project` installs into *your*
+repository, and this repository ships no `.codex/` snapshot. `skills/` here stays the single source
+of truth.
+
+Verify:
+
+```bash
+python3 scripts/install_codex.py --print-dest
+ls "$(python3 scripts/install_codex.py --print-dest)"
+codex    # then ask about rez, or run /skills
+```
 
 ## CI Publishing to ClawHub
 
@@ -128,6 +162,11 @@ With the plugin enabled, each skill is namespaced under the plugin name, for exa
 - Merges to `main` that touch `skills/**`, published releases, and manual dispatch run the real
   publish.
 - The real publish requires the repository secret `CLAWHUB_TOKEN`.
+
+The same workflow validates the Codex installer with
+`.github/scripts/validate_codex_install.py --strict` on Linux and Windows: a dry run must write
+nothing, an install must land a readable `SKILL.md` at every Codex entry, re-installing must change
+nothing, and `--uninstall` must leave the skills directory empty.
 
 ## When Skills Activate
 
