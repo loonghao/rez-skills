@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "rez",
+  "displayName": "Rez Skills",
+  "version": "1.0.0",
+  "description": "Rez package and environment management skills: core concepts, package.py authoring, commands(), the CLI, configuration and plugins, resolve internals, resolve-failure triage, and package authoring rules.",
+  "author": {
+    "name": "loonghao",
+    "url": "https://github.com/loonghao"
+  },
+  "homepage": "https://github.com/loonghao/rez-skills",
+  "repository": "https://github.com/loonghao/rez-skills",
+  "license": "MIT",
+  "keywords": [
+    "rez",
+    "package-manager",
+    "dependency-resolution",
+    "environment-management",
+    "vfx",
+    "animation"
+  ]
+}
