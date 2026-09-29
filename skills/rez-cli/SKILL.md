@@ -206,7 +206,7 @@ rez-interpret '"{root}"'             # test a rex expression
 ## Agent workflow
 
 1. Prefer non-interactive forms — `-c`, `--output`, `rez-context` — over opening a subshell.
-2. Scope output: `rez-context --so`, `rez-config <setting>`, `rez-search --format`.
+2. Scope output: `rez-context --so`, `rez-config <setting>`, `rez-search <pkg> -f <template>`.
 3. `rez-status` first when something looks broken about the environment itself.
 4. Use `rez-depends` for reverse lookups instead of broad greps.
 5. Build → install → test in that order: `rez-build --install`, `rez-env <pkg>`, `rez-test <pkg>`.

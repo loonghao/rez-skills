@@ -121,7 +121,7 @@ Work cheapest-first; do not jump to `-vvv`.
 4. **Find the real requirer** — the package you *asked* for is rarely the one causing it
    ```bash
    rez-depends <pkg>          # reverse lookup: who depends on <pkg>
-   rez-search <pkg> --format  # what versions exist
+   rez-search <pkg>           # what versions exist
    ```
 5. **Narrow the request** — bisect: drop requests until it resolves, then add back.
 6. **Only then** go to `-vvv`.
