@@ -6,16 +6,20 @@ on:
       - "skills/**"
       - ".claude-plugin/**"
       - ".github/scripts/validate_clawhub_publish.py"
+      - ".github/scripts/validate_codex_install.py"
       - ".github/scripts/validate_plugin.py"
       - ".github/scripts/validate_skill_commands.py"
+      - "scripts/install_codex.py"
       - ".github/workflows/sync-skills.yml"
   push:
     branches: [main]
     paths:
       - "skills/**"
       - ".claude-plugin/**"
+      - ".github/scripts/validate_codex_install.py"
       - ".github/scripts/validate_plugin.py"
       - ".github/scripts/validate_skill_commands.py"
+      - "scripts/install_codex.py"
   release:
     types: [published]
   workflow_dispatch:
@@ -39,6 +43,31 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/scripts/validate_plugin.py --strict
+
+  validate-codex-install:
+    name: Exercise the Codex installer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Links on POSIX, copies on Windows: both modes have to install and
+        # roll back cleanly on the platform that actually uses them.
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install, re-install, and uninstall in throwaway sandboxes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/validate_codex_install.py --strict
 
   validate-skill-commands:
     name: Smoke-test documented rez commands

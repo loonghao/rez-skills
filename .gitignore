@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Codex project-level installs land in the repository that runs the installer,
+# never here: skills/ is the only source of truth in this repo.
+/.codex/

@@ -23,11 +23,72 @@ Or load it for a single session from a clone:
 claude --plugin-dir ./rez-skills
 ```
 
+For **Codex CLI**, install the same `skills/` tree into a Codex skills directory:
+
+```bash
+git clone https://github.com/loonghao/rez-skills.git
+cd rez-skills
+python3 scripts/install_codex.py              # user level: $CODEX_HOME/skills
+python3 scripts/install_codex.py --project    # ./.codex/skills of the repo you run it in
+python3 scripts/install_codex.py --uninstall  # remove exactly what was installed
+```
+
+See [Codex CLI](#codex-cli) below for the details, the flags, and how to verify the install.
+
 Individual skills are also published to [ClawHub](https://clawhub.ai/loonghao/rez):
 
 ```bash
 clawhub install loonghao/rez
 ```
+
+## Codex CLI
+
+[Codex CLI](https://github.com/openai/codex) discovers a skill as `<skills-dir>/<skill>/SKILL.md`,
+under a user-level directory (`$CODEX_HOME/skills`, or `~/.codex/skills` when `CODEX_HOME` is unset)
+and a project-level directory (`.codex/skills`). `scripts/install_codex.py` puts this repository's
+`skills/` in front of Codex without forking it:
+
+```bash
+git clone https://github.com/loonghao/rez-skills.git
+cd rez-skills
+
+python3 scripts/install_codex.py                  # user level (default)
+python3 scripts/install_codex.py --project         # ./.codex/skills of the current repository
+python3 scripts/install_codex.py --mode copy       # copies instead of links
+python3 scripts/install_codex.py --dest PATH       # an explicit skills directory
+python3 scripts/install_codex.py --dry-run         # show what would change
+python3 scripts/install_codex.py --uninstall       # clean rollback
+```
+
+How it behaves:
+
+- **One entry per skill.** Codex only looks one level deep, so each skill directory is linked (or
+copied) individually rather than as a single bundle that Codex would not read.
+- **Links on POSIX, copies on Windows.** Links mean `git pull` in the clone updates Codex too.
+  Windows usually refuses symlinks without developer mode or elevation, so the installer falls back
+to copies there; pass `--mode copy` to force copies, or `--mode symlink` to fail instead.
+- **Idempotent.** Re-running it after a `git pull` refreshes copies and leaves links alone.
+- **Clean rollback.** `--uninstall` removes only the entries this installer added. It never deletes
+a skill it did not install: a name it does not recognise is refused at install time unless you pass
+`--force`, and left alone at uninstall time.
+- **`skills/` stays the source of truth.** Nothing is generated or rewritten. `--project` installs
+into the repository you run it from; this repository ships no `.codex/` snapshot.
+
+The installer records what it added in one hidden file, `<skills-dir>/.rez-skills.json`. That is the
+receipt `--uninstall` reads; delete it and the installer still finds its own links by following them
+back to this clone.
+
+Verify the install:
+
+```bash
+python3 scripts/install_codex.py --print-dest          # where the skills went
+ls "$(python3 scripts/install_codex.py --print-dest)"  # one directory per skill
+
+codex                                                  # then ask about rez, or run /skills
+```
+
+Each skill appears under its own name (`rez-cli`, `rez-resolve`, ...), so a prompt like "why did this
+rez resolve fail?" loads `rez-resolve-troubleshooting`.
 
 ## What's inside
 
@@ -56,6 +117,8 @@ rez-skills/                        # plugin root
 ├── .claude-plugin/
 │   ├── plugin.json                # plugin manifest
 │   └── marketplace.json           # marketplace catalog, so `plugin install` works
+├── scripts/
+│   └── install_codex.py           # Codex CLI installer / uninstaller
 └── skills/
     └── <skill>/SKILL.md           # one directory per skill
 ```
@@ -66,13 +129,20 @@ publishing each skill directory exactly as before.
 ## Validation
 
 ```bash
-python3 .github/scripts/validate_plugin.py --strict     # plugin + marketplace manifests, skill layout
+python3 .github/scripts/validate_plugin.py --strict        # plugin + marketplace manifests, skill layout
+python3 .github/scripts/validate_codex_install.py --strict # Codex installer: dry run, install, idempotency, rollback
 pip install "rez==3.4.0"
 python3 .github/scripts/validate_skill_commands.py --strict
 ```
 
 `validate_plugin.py` checks the plugin and marketplace manifests and every skill directory under
 `skills/`.
+
+`validate_codex_install.py` drives `scripts/install_codex.py` end to end in throwaway sandboxes: a
+dry run must write nothing, an install must put a readable `SKILL.md` at every Codex entry,
+re-installing must leave the tree byte-identical, and `--uninstall` must leave the skills directory
+empty without touching a skill the installer did not add. It runs on Linux and Windows, because the
+link path and the copy path are different code.
 
 `validate_skill_commands.py` checks the commands those skills tell an agent to run. It pulls every
 `rez-*` invocation out of the fenced shell blocks **and** the inline `` `code` `` spans of every
