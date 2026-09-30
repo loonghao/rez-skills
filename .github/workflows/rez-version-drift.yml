@@ -1,0 +1,43 @@
+name: Check rez version drift
+
+# Its own workflow rather than one more job in sync-skills.yml on purpose.
+# That workflow derives PUBLISH from the event name, so every trigger it
+# carries is also a trigger that really publishes to ClawHub: adding `schedule`
+# to it would put the repository on a timer that pushes to a public registry
+# once a week. A drift check has to be able to run unattended and publish
+# nothing.
+on:
+  schedule:
+    # Weekly, Monday 06:17 UTC: after the weekend, before the working day, and
+    # off the hour so it does not queue behind every top-of-hour cron on
+    # GitHub's side.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: rez-version-drift
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: Compare REZ_VERSION with upstream releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Fail when upstream rez has moved past the pin
+        env:
+          # Reading the release list unauthenticated would share a 60/hour
+          # budget with every other job that lands on the same runner IP.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/check_rez_version_drift.py

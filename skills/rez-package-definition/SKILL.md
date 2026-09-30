@@ -172,7 +172,9 @@ Useful for routing internally- and externally-developed packages to different re
 ## Preprocessing
 
 `package.py` can be preprocessed before evaluation — for example to add a version timestamp or
-to generate attributes from an external source. See `rez-package-preprocessing` in the Rez docs.
+to generate attributes from an external source. See the "Package Preprocessing" section of the
+Rez package-definition docs: the `package_preprocess_function` setting installs a global
+preprocessor, and `rez-build --view-pre` prints the preprocessed result.
 Prefer the simplest thing that works: an `@early()` function usually covers the same ground with
 far less machinery.
 
