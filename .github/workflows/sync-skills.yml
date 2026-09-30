@@ -4,10 +4,13 @@ on:
   pull_request:
     paths:
       - "skills/**"
+      - "plugin.json"
       - ".claude-plugin/**"
+      - ".github/schemas/**"
       - ".github/scripts/validate_clawhub_publish.py"
       - ".github/scripts/validate_codex_install.py"
       - ".github/scripts/validate_plugin.py"
+      - ".github/scripts/validate_agent_plugins_spec.py"
       - ".github/scripts/validate_skill_commands.py"
       - ".github/scripts/validate_skill_semantics.py"
       - ".github/scripts/validate_skill_references.py"
@@ -18,9 +21,12 @@ on:
     branches: [main]
     paths:
       - "skills/**"
+      - "plugin.json"
       - ".claude-plugin/**"
+      - ".github/schemas/**"
       - ".github/scripts/validate_codex_install.py"
       - ".github/scripts/validate_plugin.py"
+      - ".github/scripts/validate_agent_plugins_spec.py"
       - ".github/scripts/validate_skill_commands.py"
       - ".github/scripts/validate_skill_semantics.py"
       - "scripts/install_codex.py"
@@ -55,6 +61,39 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/scripts/validate_plugin.py --strict
+
+  # `.claude-plugin/plugin.json` is the manifest Claude reads. `plugin.json` at
+  # the plugin root is the layout the Agent Plugins specification says any
+  # conforming client can load -- read the manifest, then discover
+  # `skills/<name>/SKILL.md` -- which is what lets a Codex plugin install, or
+  # another client's, pick this tree up without a fork. It is checked against
+  # the schema the specification publishes, vendored under `.github/schemas/`,
+  # so a key the specification does not define is rejected rather than waved
+  # through because nobody thought to forbid it.
+  validate-agent-plugins-spec:
+    name: Validate the Agent Plugins manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install the JSON Schema validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check jsonschema
+      - name: Validate plugin.json against the Agent Plugins 1.0.0 schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/validate_agent_plugins_spec.py --strict
 
   validate-codex-install:
     name: Exercise the Codex installer (${{ matrix.os }})
@@ -224,6 +263,7 @@ jobs:
     # so this waits for the whole matrix, which is the point.
     needs:
       - discover
+      - validate-agent-plugins-spec
       - validate-codex-install
       - validate-skill-commands
       - validate-skill-semantics

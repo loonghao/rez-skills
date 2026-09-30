@@ -114,9 +114,12 @@ both distribution paths:
 
 ```
 rez-skills/                        # plugin root
+├── plugin.json                    # Agent Plugins manifest: what any conforming client reads
 ├── .claude-plugin/
-│   ├── plugin.json                # plugin manifest
+│   ├── plugin.json                # Claude plugin manifest
 │   └── marketplace.json           # marketplace catalog, so `plugin install` works
+├── .github/
+│   └── schemas/                   # vendored Agent Plugins 1.0.0 JSON Schema
 ├── scripts/
 │   └── install_codex.py           # Codex CLI installer / uninstaller
 └── skills/
@@ -126,17 +129,47 @@ rez-skills/                        # plugin root
 Because `skills/` stays where it is, `.github/workflows/sync-skills.yml` keeps discovering and
 publishing each skill directory exactly as before.
 
+## Agent Plugins spec
+
+`plugin.json` at the plugin root is the manifest the
+[Agent Plugins specification](https://github.com/agentplugins/agent-plugins-spec) defines: a
+conforming client reads it and then discovers `skills/<name>/SKILL.md` underneath. That is what
+makes one checkout installable by Claude *and* by Codex, or by a client neither of us has met yet,
+without any of them needing a fork -- the skills stay where they are and each client reads its own
+entry point.
+
+It is checked against the schema the specification publishes, vendored at
+`.github/schemas/agent-plugins-1.0.0-plugin.schema.json`, by the `Validate the Agent Plugins
+manifest` job of `.github/workflows/sync-skills.yml`, which also has to pass before any skill is
+published. The schema sets `additionalProperties: false`, so a key the specification does not
+define is rejected rather than carried: `displayName` is a legal Claude manifest key and an illegal
+Agent Plugins one, and copying the manifest next door by hand is the easiest way to introduce it.
+
+The two manifests are also checked to name the same plugin, since they are two entry points to one
+`skills/` tree. Version parity between them is not asserted yet -- release automation bumps
+`.claude-plugin/plugin.json` first, so an assertion added before the two are updated in the same
+bump would only turn `main` red between them.
+
 ## Validation
 
 ```bash
 python3 .github/scripts/validate_plugin.py --strict        # plugin + marketplace manifests, skill layout
 python3 .github/scripts/validate_codex_install.py --strict # Codex installer: dry run, install, idempotency, rollback
+pip install jsonschema
+python3 .github/scripts/validate_agent_plugins_spec.py --strict  # plugin.json vs Agent Plugins 1.0.0
 pip install "rez==3.4.0"
 python3 .github/scripts/validate_skill_commands.py --strict
 ```
 
 `validate_plugin.py` checks the plugin and marketplace manifests and every skill directory under
 `skills/`.
+
+`validate_agent_plugins_spec.py` validates the root `plugin.json` against the vendored Agent
+Plugins 1.0.0 schema with a real JSON Schema validator, checks that the vendored file is the
+schema it claims to be, and requires the root and Claude manifests to name the same plugin. It
+ends by proving it can still fail: it hands the validator a manifest carrying `displayName`, a
+name outside the pattern, a name that is empty, a name that is missing, and one with no `$schema`,
+and requires every one to be rejected -- so a lax schema copy is reported instead of trusted.
 
 `validate_codex_install.py` drives `scripts/install_codex.py` end to end in throwaway sandboxes: a
 dry run must write nothing, an install must put a readable `SKILL.md` at every Codex entry,
@@ -157,11 +190,11 @@ subcommands. In CI this is the `Smoke-test documented rez commands` job of
 `.github/workflows/sync-skills.yml` publishes every directory under `skills/` to
 [ClawHub](https://clawhub.ai/loonghao/rez):
 
-- **Pull requests** touching `skills/**` or `.claude-plugin/**` validate the plugin layout, then run
-  `clawhub skill publish --dry-run` for each skill and validate the receipt. No credentials needed,
-  nothing is published.
-- **Merges to `main`** touching `skills/**`, published releases, and manual dispatch run the real
-  publish, which requires the `CLAWHUB_TOKEN` repository secret.
+- **Pull requests** touching `skills/**`, `plugin.json` or `.claude-plugin/**` validate the plugin
+  layout, then run `clawhub skill publish --dry-run` for each skill and validate the receipt. No
+  credentials needed, nothing is published.
+- **Merges to `main`** touching `skills/**` or `plugin.json`, published releases, and manual
+  dispatch run the real publish, which requires the `CLAWHUB_TOKEN` repository secret.
 
 The ClawHub CLI is pinned to `0.23.3`.
 
