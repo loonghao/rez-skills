@@ -1,0 +1,45 @@
+name: Release Please
+
+# Release-please turns the conventional commits landing on main into a release
+# PR, then into a tag and a GitHub release. Keeping it here also makes it the
+# single owner of .claude-plugin/plugin.json: the `extra-files` updater in
+# release-please-config.json is what moves the version the ClawHub publish
+# reads, so no release can be tagged while the shipped plugin still reports the
+# previous one.
+#
+# The publish link at the bottom is explicit on purpose. A release created with
+# the GITHUB_TOKEN does not start another workflow run by itself, so the
+# `release: published` event in sync-skills.yml can never fire for these
+# releases; `workflow_dispatch` is one of the events they can still start, and
+# sync-skills.yml refuses to publish from anywhere but refs/heads/main -- which
+# is exactly the ref passed below.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Open or update the release PR, and release once it is merged
+        id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Publish the skills for the release
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run sync-skills.yml --ref main
