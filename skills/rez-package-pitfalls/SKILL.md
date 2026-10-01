@@ -98,7 +98,9 @@ def commands():
 ```
 
 The installed `package.py` then carries `name`, `version`, `commands`, `timestamp` and
-`format_version` — and nothing else.
+`format_version` — and nothing else. The last two are rez's, not yours: `timestamp` defaults to the
+install time and `format_version` is always written by the filesystem package repository
+(`rezplugins/package_repository/filesystem.py`), so expect both after every `rez-build --install`.
 
 ## Pitfall 2 — module-scope values are frozen on the build machine
 
@@ -225,11 +227,18 @@ Reproduced on 3.4.0 by loading each snippet and dumping the installed form:
 | `def _helper(): ...` | no — plain function stripped | — |
 | `from pathlib import Path` | **yes** | `Path = <class 'pathlib.Path'>` — unparseable |
 | `class Helper: ...` | **yes** | `Helper = <class 'Helper'>` — unparseable |
-| `my_re = re.compile(r'foo-\d+')` | **yes** | `my_re = re.compile('foo-\\d+')` — unparseable |
+| `my_re = re.compile(r'foo-\d+')` | **yes** | `my_re = re.compile('foo-\\d+')` — parses, then `NameError: name 're' is not defined` |
 | `my_const = 'hello'` | **yes** | `'hello'` — a normal attribute, this is the intended use |
 
 The rule rez applies is narrow: it strips **modules**, **functions** (except `commands`,
 `preprocess`, `@early` and `@late`) and `__`-leading names. Everything else stays.
+
+Surviving values fail in two different ways, and which one you get tells you where to look. A
+`repr` that is not valid Python (`Path = <class 'pathlib.Path'>`) fails while **parsing**, with
+`invalid syntax`. A `repr` that *is* valid Python but names a stripped module
+(`my_re = re.compile(...)`) parses cleanly and fails while **executing**, with `NameError`. Both
+reach you as `ResourceError: Problem loading <path>: <reason>`, so read the reason, not just the
+exception type.
 
 ## Review checklist
 
