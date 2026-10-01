@@ -105,6 +105,9 @@ Skills under [`skills/`](skills/) — all of them load together when the plugin 
 | [`rez-package-pitfalls`](skills/rez-package-pitfalls/SKILL.md) | The `package.py` execution model — top-level imports, build-time freezing, `F821`, failed builds that still install |
 | [`rez-cli`](skills/rez-cli/SKILL.md) | `rez-env`, `rez-build`, `rez-release`, `rez-context` and the rest, with flags |
 | [`rez-config-plugins`](skills/rez-config-plugins/SKILL.md) | Configuration layering, key settings, plugin types and discovery |
+| [`rez-python-api`](skills/rez-python-api/SKILL.md) | `ResolvedContext`, package/variant objects, programmatic resolves, `.rxt` serialisation |
+| [`rez-suites-bundles`](skills/rez-suites-bundles/SKILL.md) | Suites for a shared `PATH` entry, context bundles for a relocatable environment |
+| [`rez-pip-integration`](skills/rez-pip-integration/SKILL.md) | Converting pip packages into rez packages with `rez-pip` |
 
 See the [skills README](skills/README.md) for the routing guide and authoring principles.
 
