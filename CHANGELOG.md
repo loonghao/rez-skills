@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/loonghao/rez-skills/compare/v1.1.0...v1.2.0) (2026-10-01)
+
+
+### Features
+
+* add rez-python-api, rez-suites-bundles and rez-pip-integration skills ([#24](https://github.com/loonghao/rez-skills/issues/24)) ([d6da96d](https://github.com/loonghao/rez-skills/commit/d6da96d9633fbc5dad8b41b07251129766395560))
+
 ## [1.1.0](https://github.com/loonghao/rez-skills/compare/v1.0.0...v1.1.0) (2026-10-01)
 
 

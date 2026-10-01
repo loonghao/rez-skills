@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "rez",
   "displayName": "Rez Skills",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Rez package and environment management skills: core concepts, package.py authoring, commands(), the CLI, configuration and plugins, resolve internals, resolve-failure triage, and package authoring rules.",
   "author": {
     "name": "loonghao",
