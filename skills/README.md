@@ -39,6 +39,9 @@ These skills teach agents to be precise, scoped, and token-aware:
 | **rez-package-pitfalls** | The `package.py` execution model — top-level imports and serialization, build-time freezing, `F821` on rez-injected names, failed builds that still install | "invalid syntax" from a package you did not write that way, a value frozen on the build machine, reviewing module scope before release |
 | **rez-cli** | Command reference — `rez-env`, `rez-build`, `rez-release`, `rez-context`, `rez-search`, flags | "What is the command for…", build/release/test loops |
 | **rez-config-plugins** | Config layering, merge rules, key settings, the seven plugin types and discovery | Configuring rez, writing or installing plugins |
+| **rez-python-api** | `ResolvedContext`, Package/Variant objects, programmatic resolves, `.rxt` serialisation, running code inside a context | Driving rez from Python, "what does a context object hold?" |
+| **rez-suites-bundles** | Suites, tool aliasing/prefixing/hiding, control arguments, `rez-bundle` and `bundle_context()` | Shipping a resolve to artists, a farm, a container or another machine |
+| **rez-pip-integration** | `rez-pip`, install vs release vs prefix, python version handling, `pip_install_package` | Getting a PyPI package into rez, a broken converted package |
 
 ## Structure
 
@@ -59,7 +62,10 @@ rez-skills/                            # plugin root
     ├── rez-package-authoring/SKILL.md
     ├── rez-package-pitfalls/SKILL.md
     ├── rez-cli/SKILL.md
-    └── rez-config-plugins/SKILL.md
+    ├── rez-config-plugins/SKILL.md
+    ├── rez-python-api/SKILL.md
+    ├── rez-suites-bundles/SKILL.md
+    └── rez-pip-integration/SKILL.md
 ```
 
 Each `SKILL.md` carries YAML frontmatter with `name` and `description` only. The `name` must
@@ -87,8 +93,12 @@ User's question:
 │  → rez-cli
 ├─ rezconfig / settings not applied / writing or installing a plugin
 │  → rez-config-plugins
-└─ Python API / ResolvedContext / suites / context bundles
-   → rez-core-concepts (foundation) + the rez docs' api.rst
+├─ Driving rez from Python / ResolvedContext / what a context holds
+│  → rez-python-api
+├─ Shipping a resolve to artists / a farm / a container
+│  → rez-suites-bundles
+└─ Getting a pip package into rez
+   → rez-pip-integration
 ```
 
 | User's question | Recommended skill |
@@ -109,6 +119,11 @@ User's question:
 | "Where does rez look for packages?" | rez-core-concepts |
 | "My setting isn't taking effect" | rez-config-plugins |
 | "How do I write a shell/build-system plugin?" | rez-config-plugins |
+| "How do I resolve from Python instead of the CLI?" | rez-python-api |
+| "What's in this .rxt file?" | rez-python-api |
+| "How do I give artists one PATH entry for many tools?" | rez-suites-bundles |
+| "How do I ship this environment to the farm?" | rez-suites-bundles |
+| "How do I install a PyPI package as a rez package?" | rez-pip-integration |
 
 ## Install
 
@@ -180,8 +195,9 @@ nothing, and `--uninstall` must leave the skills directory empty.
 The skills trigger when:
 
 - The project contains `package.py` files or a rez package repository layout
-- The user mentions `rez`, `rez-env`, `rez-build`, `rez-release`, or `package.py`
+- The user mentions `rez`, `rez-env`, `rez-build`, `rez-release`, `rez-pip`, or `package.py`
 - The user asks about package resolves, variants, or VFX/animation environment management
+- The user wants to drive rez from Python, or to deliver a resolved environment to another machine
 
 ## Links
 
