@@ -16,6 +16,11 @@ name: Release Please
 on:
   push:
     branches: [main]
+  # A release commit only reaches the tag on a later run, and the merge that
+  # creates it does not start one by itself. Without a manual entry point, a run
+  # that failed for an environment reason -- an unset repository permission, a
+  # registry outage -- stays failed until someone happens to push again.
+  workflow_dispatch:
 
 permissions:
   actions: write
