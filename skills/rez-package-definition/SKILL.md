@@ -46,6 +46,13 @@ Every module-level variable becomes an attribute — including custom ones. Thes
 - names with a leading double underscore;
 - any build-only attribute.
 
+That list is exactly as wide as it reads, and no wider. A **class** is not a module and not a
+function, so `from pathlib import Path` at module scope does create a `Path` attribute — and it is
+serialized into the installed `package.py` as `Path = <class 'pathlib.Path'>`, which no longer
+parses. Same for a class defined in the file and for any object instance. Values *derived* from a
+stripped module survive too: `sys_path = sys.prefix` is kept, frozen on the build machine. See
+`rez-package-pitfalls` for the errors and the correct form.
+
 ## Standard attributes
 
 | Attribute | Type | Purpose |

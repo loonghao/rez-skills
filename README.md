@@ -102,6 +102,7 @@ Skills under [`skills/`](skills/) — all of them load together when the plugin 
 | [`rez-resolve`](skills/rez-resolve/SKILL.md) | Solver internals, `-v` debug output, diagnosing conflicts and cycles |
 | [`rez-resolve-troubleshooting`](skills/rez-resolve-troubleshooting/SKILL.md) | Triage when a resolve fails: six causes, the command that confirms each |
 | [`rez-package-authoring`](skills/rez-package-authoring/SKILL.md) | Authoring rules — version vs. variant, dependency ranges, build/release loop, anti-patterns |
+| [`rez-package-pitfalls`](skills/rez-package-pitfalls/SKILL.md) | The `package.py` execution model — top-level imports, build-time freezing, `F821`, failed builds that still install |
 | [`rez-cli`](skills/rez-cli/SKILL.md) | `rez-env`, `rez-build`, `rez-release`, `rez-context` and the rest, with flags |
 | [`rez-config-plugins`](skills/rez-config-plugins/SKILL.md) | Configuration layering, key settings, plugin types and discovery |
 
