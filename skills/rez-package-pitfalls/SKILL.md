@@ -1,6 +1,6 @@
 ---
 name: rez-package-pitfalls
-description: "The package.py execution model and the errors it produces — why a top-level `from x import SomeClass` makes the installed package.py unparseable, why module-scope values are frozen on the build machine, why `env`/`this`/`root` look undefined to linters, and why a failed rez-build still installs. Use when a package resolves or builds with a confusing error, when reviewing a package.py for module-scope mistakes, or before releasing one. Covers Rez 3.4.0."
+description: "The package.py execution model and the errors it produces — why a top-level `from x import SomeClass` makes the installed package.py unparseable, why module-scope values are frozen on the build machine, why `env`/`this`/`root` look undefined to linters, and why a failed rez-build can leave a broken install behind. Use when a package resolves or builds with a confusing error, when reviewing a package.py for module-scope mistakes, or before releasing one. Covers Rez 3.4.0."
 ---
 
 # Rez `package.py` pitfalls
@@ -185,7 +185,7 @@ env.RESOURCE_PATH.prepend("{this.root}/resource")    # noqa: F821
 Do not "fix" it by defining `env` or `root` yourself at module scope — that shadows rez's binding and
 creates a real package attribute that then gets serialized (pitfall 1 and 2).
 
-## Pitfall 4 — the build reports the error and installs anyway
+## Pitfall 4 — a failed build can leave a broken install on the package path
 
 ### Symptom
 
@@ -194,16 +194,25 @@ instead of a temp file.
 
 ### Trigger
 
-`rez-build --install` exits non-zero on the serialization failure above, but it has already written
-the install. The broken package is now on your package path, so every later resolve and every later
-build of that package fails while reading it, whatever your source says.
+A failed `rez-build --install` leaves a package behind whenever the run got as far as writing the
+install. Whether it did depends on where the build stopped: the failure in pitfall 1 happens while
+resolving the build environment, before the build system is invoked, so that run installs nothing —
+but a failure during or after the install step does leave the payload in place. When an install is
+left behind, every later resolve and every later build of that package fails while reading it,
+whatever your source now says.
 
 ### Correct form
 
-Delete the broken install, then rebuild:
+Check whether the failed run left an install behind before deleting anything — the answer is not
+always yes:
 
 ```bash
-rez-search foo                 # confirm the broken version is visible
+rez-search foo                 # is foo visible, and at which version?
+```
+
+If it is, remove that version and rebuild:
+
+```bash
 rm -rf <packages_path>/foo/1.0.0
 rez-build --install
 ```
@@ -231,7 +240,8 @@ Reproduced on 3.4.0 by loading each snippet and dumping the installed form:
 | `my_const = 'hello'` | **yes** | `'hello'` — a normal attribute, this is the intended use |
 
 The rule rez applies is narrow: it strips **modules**, **functions** (except `commands`,
-`preprocess`, `@early` and `@late`) and `__`-leading names. Everything else stays.
+`pre_commands`, `post_commands`, `pre_build_commands`, `pre_test_commands`, `preprocess`, `@early`
+and `@late`) and `__`-leading names. Everything else stays.
 
 Surviving values fail in two different ways, and which one you get tells you where to look. A
 `repr` that is not valid Python (`Path = <class 'pathlib.Path'>`) fails while **parsing**, with
@@ -249,9 +259,10 @@ exception type.
 - [ ] Every `env` / `this` / `root` use in `commands()` carries `# noqa: F821` if the repo lints
       `package.py`.
 - [ ] No `env`, `this` or `root` is defined at module scope to "satisfy" a linter.
-- [ ] `rez-build --install` exits 0 **and** `rez-env <pkg>` resolves — a non-zero build still
-      installs.
-- [ ] After a serialization failure, the broken install was removed before rebuilding.
+- [ ] `rez-build --install` exits 0 **and** `rez-env <pkg>` resolves — a non-zero build may still
+      have written an install.
+- [ ] After a serialization failure, `rez-search <pkg>` was used to check for a broken install, and
+      any that was found was removed before rebuilding.
 
 ## Agent workflow
 
@@ -260,6 +271,7 @@ exception type.
 2. Grep the module scope of `package.py` for `import`, `class`, and anything that is not a literal
    before suspecting the solver.
 3. Move imports into `commands()`; move environment-dependent values into `commands()` too.
-4. Delete any broken install from the previous attempt, then `rez-build --install`.
+4. Check for a broken install left by the previous attempt (`rez-search <pkg>`), remove it if
+   present, then `rez-build --install`.
 5. Confirm with `rez-env <pkg>` in a separate shell — a green build proves the file parses, not that
    it resolves.
