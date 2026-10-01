@@ -396,8 +396,13 @@ jobs:
             const firstPublish = receipt.status === "would-publish" && receipt.latestVersion === null;
             process.exit(firstPublish ? 0 : 1);
           '; then
+            # The registry rejects category slugs that are not on its own list --
+            # "Unknown skill category slug" -- so only slugs published skills
+            # already carry may appear here. `developer-tools` and `documentation`
+            # are not on that list, and passing them failed all eight first
+            # publishes. Topics are free-form and carry the rest of the metadata.
             catalog_args=(
-              --categories developer-tools,documentation
+              --categories development,knowledge
               --topics rez,package-manager,vfx,dependency-resolution,environment-management
             )
           fi
