@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/loonghao/rez-skills/compare/v1.0.0...v1.1.0) (2026-10-01)
+
+
+### Features
+
+* add rez-package-pitfalls skill for the package.py execution model ([#27](https://github.com/loonghao/rez-skills/issues/27)) ([bec504b](https://github.com/loonghao/rez-skills/commit/bec504b20443ebd79699fb59032eb74d373b980e))
+
+
+### Bug Fixes
+
+* **ci:** pass --repo to the release publish dispatch ([113d6ea](https://github.com/loonghao/rez-skills/commit/113d6ea41b1c8704e9e8cfae1534bd6b75e5926c))
+
 ## [1.0.0](https://github.com/loonghao/rez-skills/compare/v1.0.0...v1.0.0) (2026-10-01)
 
 
