@@ -36,6 +36,7 @@ These skills teach agents to be precise, scoped, and token-aware:
 | **rez-resolve** | Solver internals, `-v` debug output, conflicts/cycles/reductions, graphs, caching | "How does the solver work?", reading `-v` traces |
 | **rez-resolve-troubleshooting** | Diagnosing resolve failures — six causes, the command that confirms each, cache and filter pitfalls | "The context failed to resolve", a conflict to attribute, a package rez will not use |
 | **rez-package-authoring** | Authoring rules and decisions — version vs. variant, range width, `requires`/`variants`/`commands`, build/release loop, anti-patterns | Writing or reviewing a `package.py`, deciding whether a change needs a new version or variant |
+| **rez-package-pitfalls** | The `package.py` execution model — top-level imports and serialization, build-time freezing, `F821` on rez-injected names, failed builds that still install | "invalid syntax" from a package you did not write that way, a value frozen on the build machine, reviewing module scope before release |
 | **rez-cli** | Command reference — `rez-env`, `rez-build`, `rez-release`, `rez-context`, `rez-search`, flags | "What is the command for…", build/release/test loops |
 | **rez-config-plugins** | Config layering, merge rules, key settings, the seven plugin types and discovery | Configuring rez, writing or installing plugins |
 
@@ -56,6 +57,7 @@ rez-skills/                            # plugin root
     ├── rez-resolve/SKILL.md
     ├── rez-resolve-troubleshooting/SKILL.md
     ├── rez-package-authoring/SKILL.md
+    ├── rez-package-pitfalls/SKILL.md
     ├── rez-cli/SKILL.md
     └── rez-config-plugins/SKILL.md
 ```
@@ -73,6 +75,8 @@ User's question:
 │  → rez-package-definition
 ├─ Version vs. variant decision / range width / authoring rules and anti-patterns
 │  → rez-package-authoring
+├─ "invalid syntax" on build / a value frozen on the build machine / module-scope mistakes
+│  → rez-package-pitfalls
 ├─ commands() / env vars / PATH / PYTHONPATH / string expansion / rex
 │  → rez-package-commands
 ├─ Resolve failed / a conflict to attribute / a package rez will not use
@@ -95,6 +99,9 @@ User's question:
 | "Which package pulled in this conflicting version?" | rez-resolve-troubleshooting |
 | "How do I declare a build-only dependency?" | rez-package-definition |
 | "Should this be a new version or a new variant?" | rez-package-authoring |
+| "Why does rez-build say invalid syntax?" | rez-package-pitfalls |
+| "Can I import at the top of package.py?" | rez-package-pitfalls |
+| "Why does my package use the build machine's home directory?" | rez-package-pitfalls |
 | "How wide should this dependency range be?" | rez-package-authoring |
 | "How do I add python to PATH?" | rez-package-commands |
 | "How do I build and install locally?" | rez-cli |

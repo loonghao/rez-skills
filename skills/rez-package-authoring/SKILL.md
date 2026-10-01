@@ -11,7 +11,9 @@ description: "Rules and decision-making for authoring Rez packages — how to sp
 
 Skill scope: **how to decide and structure a package**. For the attribute reference and
 `@early`/`@late` mechanics see `rez-package-definition`; for the `commands()` body and rex API see
-`rez-package-commands`; for build/release command flags see `rez-cli`.
+`rez-package-commands`; for build/release command flags see `rez-cli`; for what rez does to the
+module scope of `package.py` — serialization, build-time freezing and the errors that follow — see
+`rez-package-pitfalls`.
 
 ## The three decisions, in order
 
@@ -197,6 +199,10 @@ Conventions worth following:
 | Editing a released package in place | breaks timestamped resolves and returns stale cached resolves | release a new version |
 | Setting env vars for build consumers unconditionally | pollutes runtime | guard with `if building:` |
 | Skipping `tools` and appending to `PATH` by hand | loses tool tracking and conflict detection | use the `tools` attribute |
+
+For the ones that produce a rez error rather than a bad decision — top-level imports that make the
+installed `package.py` unparseable, values frozen on the build machine — see
+`rez-package-pitfalls`, which carries the verbatim error text.
 
 ## Review checklist
 
