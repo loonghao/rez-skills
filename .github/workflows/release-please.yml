@@ -40,11 +40,18 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      # This job has no checkout step, so the working directory is not a git
+      # repository and `gh` cannot resolve the target from a remote. Without an
+      # explicit --repo the call dies with
+      # "failed to run git: fatal: not a git repository", which is what stopped
+      # every release from publishing its skills. --ref main is what lets
+      # sync-skills.yml past its "Require merged manual publish source" gate.
       - name: Publish the skills for the release
         if: ${{ steps.release.outputs.release_created }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow run sync-skills.yml --ref main
+          gh workflow run sync-skills.yml --repo "$GH_REPO" --ref main
