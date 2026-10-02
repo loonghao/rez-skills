@@ -142,8 +142,23 @@ python3 scripts/install_codex.py              # user level: $CODEX_HOME/skills
 python3 scripts/install_codex.py --project    # ./.codex/skills of the repo you run it in
 python3 scripts/install_codex.py --uninstall  # remove exactly what was installed
 
-# Via ClawHub CLI, per skill
-clawhub install loonghao/rez
+# Via ClawHub / OpenClaw, one skill per command — there is no bundle install
+openclaw skills install @loonghao/rez-cli
+clawhub install @loonghao/rez-cli
+```
+
+ClawHub publishes every skill in this repository as its own listing under `@loonghao`, so installing
+the whole set is one command per slug. A shell loop is the shortcut:
+
+```bash
+for skill in rez-cli rez-config-plugins rez-core-concepts rez-package-authoring \
+             rez-package-commands rez-package-definition rez-package-pitfalls \
+             rez-pip-integration rez-python-api rez-resolve rez-resolve-troubleshooting \
+             rez-suites-bundles; do
+  openclaw skills install "@loonghao/$skill"
+done
+
+openclaw skills update --all   # keep installed ClawHub skills current
 ```
 
 With the plugin enabled, each skill is namespaced under the plugin name, for example
@@ -203,4 +218,5 @@ The skills trigger when:
 
 - **Rez GitHub**: https://github.com/AcademySoftwareFoundation/rez
 - **Rez docs**: https://rez.readthedocs.io
-- **ClawHub**: https://clawhub.ai/loonghao/rez
+- **ClawHub**: https://clawhub.ai/loonghao — one listing per skill, at
+  `https://clawhub.ai/loonghao/skills/<slug>`
