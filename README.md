@@ -35,11 +35,41 @@ python3 scripts/install_codex.py --uninstall  # remove exactly what was installe
 
 See [Codex CLI](#codex-cli) below for the details, the flags, and how to verify the install.
 
-Individual skills are also published to [ClawHub](https://clawhub.ai/loonghao/rez):
+### ClawHub and OpenClaw
+
+Every skill in this repository is published to [ClawHub](https://clawhub.ai/loonghao) as its own
+listing under the `@loonghao` owner, and each one is installed by its own slug:
 
 ```bash
-clawhub install loonghao/rez
+openclaw skills install @loonghao/rez-cli   # OpenClaw
+clawhub install @loonghao/rez-cli           # ClawHub CLI
 ```
+
+A published skill lives at `https://clawhub.ai/loonghao/skills/<slug>`, for example
+[rez-cli](https://clawhub.ai/loonghao/skills/rez-cli).
+
+ClawHub has **no bundle install**. A skill reference names exactly one skill, and
+`openclaw skills install` takes exactly one reference — passing two is rejected with `Too many
+arguments for this command.` This repository is a *catalog* repo: one source that publishes twelve
+skills, each under its own slug. Installing the whole set is therefore twelve installs, which a
+shell loop turns into one command:
+
+```bash
+for skill in rez-cli rez-config-plugins rez-core-concepts rez-package-authoring \
+             rez-package-commands rez-package-definition rez-package-pitfalls \
+             rez-pip-integration rez-python-api rez-resolve rez-resolve-troubleshooting \
+             rez-suites-bundles; do
+  openclaw skills install "@loonghao/$skill"
+done
+```
+
+Once installed, `openclaw skills update --all` keeps every ClawHub-installed skill up to date.
+
+The slugs above are the twelve directories under [`skills/`](skills/) and the twelve listings
+ClawHub reports for `@loonghao`; `clawhub search rez --prefix` is the check that they still agree.
+See [ClawHub publishing](https://docs.openclaw.ai/clawhub/publishing) for the catalog-repo model —
+the reusable workflow "calls `skill publish` for each immediate skill folder under root" — and the
+[`skills` CLI reference](https://docs.openclaw.ai/cli/skills) for the single-reference install.
 
 ## Codex CLI
 
@@ -192,13 +222,17 @@ subcommands. In CI this is the `Smoke-test documented rez commands` job of
 ## Publishing
 
 `.github/workflows/sync-skills.yml` publishes every directory under `skills/` to
-[ClawHub](https://clawhub.ai/loonghao/rez):
+[ClawHub](https://clawhub.ai/loonghao). The workflow discovers the skill directories, then runs one
+`clawhub skill publish` per directory, so each skill becomes its own listing under `@loonghao`.
 
 - **Pull requests** touching `skills/**`, `plugin.json` or `.claude-plugin/**` validate the plugin
   layout, then run `clawhub skill publish --dry-run` for each skill and validate the receipt. No
   credentials needed, nothing is published.
 - **Merges to `main`** touching `skills/**` or `plugin.json`, published releases, and manual
   dispatch run the real publish, which requires the `CLAWHUB_TOKEN` repository secret.
+
+Adding a directory under `skills/` is what adds a listing; nothing publishes the tree as one skill.
+Use [ClawHub and OpenClaw](#clawhub-and-openclaw) for the install side of that split.
 
 The ClawHub CLI is pinned to `0.23.3`.
 
