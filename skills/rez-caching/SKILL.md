@@ -88,9 +88,17 @@ rez-memcache --poll              # continuously show get/sets per second
 ```
 
 `--stats` is the one to reach for first — a high hit ratio on a studio server is the whole point of
-the cache, and a ratio near zero means it is not doing anything. With no servers configured it
-prints `memcaching is not enabled.` and exits 0, which is a cheap way to confirm your
-`memcached_uri` is being read at all.
+the cache, and a ratio near zero means it is not doing anything.
+
+With no servers configured — the default, since `memcached_uri` is empty — every `rez-memcache`
+subcommand prints `memcaching is not enabled.` **to stderr and exits 1**. That is worth knowing
+before you put it in a script: exit 1 here means "caching is off", which is the normal state, not a
+fault. If you only care whether memcaching is configured, redirect stderr and treat 1 as
+informational:
+
+```bash
+rez-memcache --stats 2>&1 || true
+```
 
 `--flush` is the blunt instrument. It is safe — the cache is a cache — but on a busy studio server
 it pushes the cost of every subsequent solve back onto the machines that were sharing results.
@@ -217,15 +225,38 @@ rez-config --source-list resolve_caching
 
 ## Measuring instead of guessing
 
-`rez-benchmark` times repeated resolves and writes a results directory; `--compare` diffs two runs,
-so a negative `mean_delta` means the second directory is faster on average. Use it before and after
-a cache change rather than trusting a stopwatch:
+`rez-benchmark` runs a fixed set of resolves and writes a results directory containing
+`summary.json`. Use it before and after a cache change rather than trusting a stopwatch.
+
+Run each benchmark on its own — `--compare` **replaces** the benchmark run rather than following it,
+so a second `rez-benchmark --out after --compare before` never writes `after` at all. Two separate
+runs, then the comparison as a third command:
 
 ```bash
 rez-benchmark --out before
+rez-benchmark --out after
 rez-benchmark --out after --compare before
 rez-benchmark --histogram --out after
 ```
+
+`--compare` reports each statistic as a `[delta, percentage]` pair, and the sign is easy to read
+backwards. The delta is always **the `--compare` directory minus the `--out` directory**:
+
+```text
+mean_delta = mean(--compare) - mean(--out)
+```
+
+So for the command above, where `--out` is `after` and `--compare` is `before`:
+
+- **`mean_delta` is positive → `after` is faster** (the baseline was slower, so your change helped).
+- **`mean_delta` is negative → `after` is slower** (your change made things worse).
+
+Say which directory is which rather than relying on "the second one" — the two directories play
+opposite roles, and the whole point of the run is one number's sign.
+
+One caveat: the comparison divides by the `--out` summary's values, so a `--out` summary containing
+a `0.0` (a `min` of zero is common on a fast machine) fails with `ZeroDivisionError`. Swapping the
+two directories usually clears it, since the other run rarely has a zero in the same field.
 
 For a per-solve breakdown, `rez-env --stats` prints solver counters (`num_solves`, `load_time`,
 `solve_time`, reduction and intersection counts). It reports **solver** statistics, not cache hit
