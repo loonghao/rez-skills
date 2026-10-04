@@ -42,6 +42,10 @@ These skills teach agents to be precise, scoped, and token-aware:
 | **rez-python-api** | `ResolvedContext`, Package/Variant objects, programmatic resolves, `.rxt` serialisation, running code inside a context | Driving rez from Python, "what does a context object hold?" |
 | **rez-suites-bundles** | Suites, tool aliasing/prefixing/hiding, control arguments, `rez-bundle` and `bundle_context()` | Shipping a resolve to artists, a farm, a container or another machine |
 | **rez-pip-integration** | `rez-pip`, install vs release vs prefix, python version handling, `pip_install_package` | Getting a PyPI package into rez, a broken converted package |
+| **rez-caching** | The two caches — memcached resolve cache vs on-disk package payload cache, the settings that enable each, what invalidates an entry, `rez-memcache` / `rez-pkg-cache` | "Resolves are slow", "I changed the package and nothing happened" |
+| **rez-package-orderers** | `package_orderers` and the `sorted` / `version_split` / `per_family` / `soft_timestamp` / `no_order` orderers, custom orderers | "Why did rez pick that version?", a python-2 to python-3 migration pin |
+| **rez-test-ci** | The `tests` attribute, `run_on` tags, every `rez-test` flag, how the exit code is derived, running package tests in CI | Adding tests to a package, a CI job that runs fewer tests than you declared |
+| **rez-windows-platform** | Windows shells (`cmd` / `gitbash` / `powershell` / `pwsh`), the path-separator trap, implicit platform packages, `rez-interpret` | A one-liner that works in bash but fails in `cmd`, porting a package across operating systems |
 
 ## Structure
 
@@ -65,7 +69,11 @@ rez-skills/                            # plugin root
     ├── rez-config-plugins/SKILL.md
     ├── rez-python-api/SKILL.md
     ├── rez-suites-bundles/SKILL.md
-    └── rez-pip-integration/SKILL.md
+    ├── rez-pip-integration/SKILL.md
+    ├── rez-caching/SKILL.md
+    ├── rez-package-orderers/SKILL.md
+    ├── rez-test-ci/SKILL.md
+    └── rez-windows-platform/SKILL.md
 ```
 
 Each `SKILL.md` carries YAML frontmatter with `name` and `description` only. The `name` must
@@ -97,8 +105,16 @@ User's question:
 │  → rez-python-api
 ├─ Shipping a resolve to artists / a farm / a container
 │  → rez-suites-bundles
-└─ Getting a pip package into rez
+├─ Getting a pip package into rez
    → rez-pip-integration
+├─ Resolves are slow / a package change looks ignored / what is cached
+   → rez-caching
+├─ "Why did rez pick that version?" / pinning python-2 over python-3
+   → rez-package-orderers
+├─ Adding tests to a package / running package tests in CI
+   → rez-test-ci
+└─ A command works in bash but fails in cmd / porting a package across OSes
+   → rez-windows-platform
 ```
 
 | User's question | Recommended skill |
@@ -124,6 +140,15 @@ User's question:
 | "How do I give artists one PATH entry for many tools?" | rez-suites-bundles |
 | "How do I ship this environment to the farm?" | rez-suites-bundles |
 | "How do I install a PyPI package as a rez package?" | rez-pip-integration |
+| "Why are my resolves so slow?" | rez-caching |
+| "I changed the package and nothing took effect" | rez-caching |
+| "Why did rez pick version 1.1 when 2.0 exists?" | rez-package-orderers |
+| "How do I keep python-2 as the default after the migration?" | rez-package-orderers |
+| "How do I add tests to a package?" | rez-test-ci |
+| "Why does rez-test skip my test?" | rez-test-ci |
+| "How do I run package tests in CI?" | rez-test-ci |
+| "My one-liner works in bash but fails in cmd" | rez-windows-platform |
+| "Which shells does rez support on Windows?" | rez-windows-platform |
 
 ## Install
 
@@ -151,10 +176,11 @@ ClawHub publishes every skill in this repository as its own listing under `@loon
 the whole set is one command per slug. A shell loop is the shortcut:
 
 ```bash
-for skill in rez-cli rez-config-plugins rez-core-concepts rez-package-authoring \
-             rez-package-commands rez-package-definition rez-package-pitfalls \
-             rez-pip-integration rez-python-api rez-resolve rez-resolve-troubleshooting \
-             rez-suites-bundles; do
+for skill in rez-caching rez-cli rez-config-plugins rez-core-concepts \
+             rez-package-authoring rez-package-commands rez-package-definition \
+             rez-package-orderers rez-package-pitfalls rez-pip-integration \
+             rez-python-api rez-resolve rez-resolve-troubleshooting rez-suites-bundles \
+             rez-test-ci rez-windows-platform; do
   openclaw skills install "@loonghao/$skill"
 done
 
