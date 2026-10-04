@@ -50,22 +50,23 @@ A published skill lives at `https://clawhub.ai/loonghao/skills/<slug>`, for exam
 
 ClawHub has **no bundle install**. A skill reference names exactly one skill, and
 `openclaw skills install` takes exactly one reference — passing two is rejected with `Too many
-arguments for this command.` This repository is a *catalog* repo: one source that publishes twelve
-skills, each under its own slug. Installing the whole set is therefore twelve installs, which a
+arguments for this command.` This repository is a *catalog* repo: one source that publishes sixteen
+skills, each under its own slug. Installing the whole set is therefore sixteen installs, which a
 shell loop turns into one command:
 
 ```bash
-for skill in rez-cli rez-config-plugins rez-core-concepts rez-package-authoring \
-             rez-package-commands rez-package-definition rez-package-pitfalls \
-             rez-pip-integration rez-python-api rez-resolve rez-resolve-troubleshooting \
-             rez-suites-bundles; do
+for skill in rez-caching rez-cli rez-config-plugins rez-core-concepts \
+             rez-package-authoring rez-package-commands rez-package-definition \
+             rez-package-orderers rez-package-pitfalls rez-pip-integration \
+             rez-python-api rez-resolve rez-resolve-troubleshooting rez-suites-bundles \
+             rez-test-ci rez-windows-platform; do
   openclaw skills install "@loonghao/$skill"
 done
 ```
 
 Once installed, `openclaw skills update --all` keeps every ClawHub-installed skill up to date.
 
-The slugs above are the twelve directories under [`skills/`](skills/) and the twelve listings
+The slugs above are the sixteen directories under [`skills/`](skills/) and the sixteen listings
 ClawHub reports for `@loonghao`; `clawhub search rez --prefix` is the check that they still agree.
 See [ClawHub publishing](https://docs.openclaw.ai/clawhub/publishing) for the catalog-repo model —
 the reusable workflow "calls `skill publish` for each immediate skill folder under root" — and the
@@ -138,6 +139,10 @@ Skills under [`skills/`](skills/) — all of them load together when the plugin 
 | [`rez-python-api`](skills/rez-python-api/SKILL.md) | `ResolvedContext`, package/variant objects, programmatic resolves, `.rxt` serialisation |
 | [`rez-suites-bundles`](skills/rez-suites-bundles/SKILL.md) | Suites for a shared `PATH` entry, context bundles for a relocatable environment |
 | [`rez-pip-integration`](skills/rez-pip-integration/SKILL.md) | Converting pip packages into rez packages with `rez-pip` |
+| [`rez-caching`](skills/rez-caching/SKILL.md) | The resolve and package caches — what each stores, what invalidates it, `rez-memcache` / `rez-pkg-cache`, and why a package change looks ignored |
+| [`rez-package-orderers`](skills/rez-package-orderers/SKILL.md) | Why rez picks the version it picks — `package_orderers` and the five built-in orderers |
+| [`rez-test-ci`](skills/rez-test-ci/SKILL.md) | Declaring tests in `package.py` and running them with `rez-test`, including from CI |
+| [`rez-windows-platform`](skills/rez-windows-platform/SKILL.md) | Windows differences — registered shells, the path-separator trap, implicit platform packages, install layout |
 
 See the [skills README](skills/README.md) for the routing guide and authoring principles.
 
