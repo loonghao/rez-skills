@@ -118,7 +118,7 @@ does not pull every source file across the network.
 cache_packages_path = "/path/to/local/cache"
 ```
 
-Individual packages opt in with the `cachable` attribute; when it is absent,rez falls back to
+Individual packages opt in with the `cachable` attribute; when it is absent, rez falls back to
 `default_cachable_per_repository`, then `default_cachable_per_package`, then `default_cachable`
 (`False`).
 

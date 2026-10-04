@@ -106,13 +106,13 @@ User's question:
 ├─ Shipping a resolve to artists / a farm / a container
 │  → rez-suites-bundles
 ├─ Getting a pip package into rez
-   → rez-pip-integration
+│  → rez-pip-integration
 ├─ Resolves are slow / a package change looks ignored / what is cached
-   → rez-caching
+│  → rez-caching
 ├─ "Why did rez pick that version?" / pinning python-2 over python-3
-   → rez-package-orderers
+│  → rez-package-orderers
 ├─ Adding tests to a package / running package tests in CI
-   → rez-test-ci
+│  → rez-test-ci
 └─ A command works in bash but fails in cmd / porting a package across OSes
    → rez-windows-platform
 ```
