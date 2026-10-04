@@ -178,7 +178,7 @@ class MyOrderer(PackageOrder):
     name = "my_orderer"
 
     def __init__(self, custom_arg, **kwargs):
-        super().__init__(self, **kwargs)
+        super().__init__(**kwargs)
         self.custom_arg = custom_arg
 
     def sort_key_implementation(self, package_name, version):
@@ -209,6 +209,11 @@ package_orderers = [
 ```
 
 `rezconfig.py` is ordinary Python, so the class is defined and registered at config load time.
+
+> **Do not pass `self` to `super().__init__()`** — `super().__init__(self, **kwargs)` raises
+> `TypeError: 'MyOrderer' object is not iterable`, because `self` lands in the `packages` argument
+> that the base class sorts. The upstream `package_orderers.rst` at 3.4.0 shows the broken form in
+> its custom-orderer example; the correct call is `super().__init__(**kwargs)`.
 
 Upstream explicitly warns against this: a custom orderer makes environments behave in ways users do
 not expect, and makes the affected packages harder to share. Prefer a built-in, and prefer

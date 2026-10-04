@@ -1,6 +1,6 @@
 ---
 name: rez-windows-platform
-description: "Running rez on Windows — why only cmd, gitbash, powershell and pwsh are registered there and how the default is picked, the path-separator trap where cmd and pwsh join with ';' while gitbash joins with ':', backslash versus forward slash in generated shell code, the platform/arch/os implicit packages, using rez-interpret as a cross-shell oracle without launching a shell, install and config-file layout, and CI differences. Use when a package or resolve behaves differently on Windows, when porting a package across operating systems, or when a one-liner works in bash and fails in cmd. Covers Rez 3.4.0."
+description: "Running rez on Windows — why only cmd, gitbash, powershell and pwsh are registered there and how the default is picked, the path-separator trap where cmd and pwsh join with ';' while gitbash joins with ':', backslash versus forward slash in generated shell code, the 260-character MAX_PATH limit and why variant install paths exceed it, the platform/arch/os implicit packages, using rez-interpret as a cross-shell oracle without launching a shell, install and config-file layout, and CI differences. Use when a package or resolve behaves differently on Windows, when porting a package across operating systems, when a deep path fails to read or write, or when a one-liner works in bash and fails in cmd. Covers Rez 3.4.0."
 ---
 
 # Rez on Windows
@@ -110,6 +110,67 @@ rez-env --paths "C:/studio/packages;C:/studio/local" foo -o context.rxt
   with the rex API. A hard-coded backslash will not survive a move to Linux, and a hard-coded colon
   will not survive a move to Windows.
 
+## Path length: the 260-character limit
+
+Win32 caps a path at **260 characters** (`MAX_PATH`) unless long paths are enabled. Rez paths are
+deep by construction, so this is a real failure mode and not a theoretical one.
+
+The depth comes from how a variant is laid out. For the filesystem repository the install path is
+`<repo>/<name>/<version>/<variant subpath>/`, and the variant subpath nests **one directory per
+variant requirement**. A package with
+`variants = [["python-3.11", "pytest-7", "six"]]` installs under:
+
+```text
+python-3.11\pytest-7\six
+```
+
+Add a deep shared-storage root, a build directory during `rez-build`, and the package's own
+internal tree, and the total passes 260 long before the layout looks unreasonable. A realistic
+studio example — a UNC share, a long show name, an eight-requirement variant and a nested Python
+package — measures 316 characters, 56 over the limit.
+
+Rez 3.4.0 has a helper for this, `rez.utils.filesystem.windows_long_path()`, which prefixes the
+extended-length marker to lift the limit.
+
+```text
+\\?\C:\pkgs\foo          # local path
+\\?\UNC\server\share\x    # UNC path
+```
+
+It is applied **internally and selectively** — notably in the retry path of `robust_rmtree` — so do
+not assume it covers the operation that just failed for you. Most user-facing operations still go
+through ordinary paths.
+
+To enable long paths system-wide on Windows 10 1607 and later, set the registry value
+`LongPathsEnabled` to `1` under `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem`, or apply the
+equivalent Group Policy ("Enable Win32 long paths"). A reboot is required. The extended-length
+prefix itself only works on **absolute** paths with no forward slashes and no `.` or `..`
+components, which is why rez applies it to `os.path.abspath()` output rather than to the path as
+written.
+
+### Telling a length problem from a separator problem
+
+Both surface as "rez cannot find or write this path", and they are easy to confuse. Two cheap ways
+to separate them:
+
+- **Length**: the failure tracks the path's *depth*, not its content. Shortening the repository
+  root or the package name makes it disappear. Measure it directly —
+  `python -c "import os; print(len(os.path.abspath(<path>)))"` — and compare against 260.
+- **Separator**: the failure tracks *content*, not depth. A list variable arrives as one long
+  entry, or a path with the wrong slashes. The same path at the same length works in another shell.
+
+If the path is under 260 and still fails, it is not the length limit — go back to the separator
+and quoting sections above.
+
+### Where to shorten
+
+When you cannot enable long paths fleet-wide, the cheapest wins are, in order:
+
+1. Move the package repository to a shallower root (`C:\packages` beats a deep UNC share).
+2. Shorten the package **name** — it appears in every variant path.
+3. Reduce the number of variant requirements, or let rez shortlink them.
+4. Avoid long version strings; `1.14.3+local.2026.10.05` costs more than `1.14.3`.
+
 ## The platform implicit packages
 
 Windows resolves add implicit packages that carry the OS identity. On a Windows 11 machine:
@@ -191,6 +252,8 @@ the fastest way to prove a setting is coming from the file you think it is.
 | Variant stops resolving after a Windows update | the variant pins an exact `~os` version; prefer `platform` |
 | Rez is not found in CI | the install's `Scripts` directory is not on `PATH` |
 | Paths have the wrong slashes | `cmd`/`pwsh` emit backslashes, `gitbash` emits forward slashes; both are correct for their shell |
+| A path fails only when deeply nested | over the 260-character `MAX_PATH` limit; measure it and shorten the root or the package name |
+| A failure survives enabling long paths | probably not length — check separators and quoting instead |
 | A package works when built on Windows only | a module-scope value was frozen on the build machine — see `rez-package-pitfalls` |
 
 ## Agent workflow
@@ -201,4 +264,6 @@ the fastest way to prove a setting is coming from the file you think it is.
    shell; never hand-join with `:` or `;`.
 4. Verify generated code with `rez-interpret -f <shell> --pv <VAR>` for each shell you must support.
 5. Prefer `platform` over an exact `os` version when a variant needs to differ per OS.
+6. When a path operation fails, measure the path length before changing anything else — over 260
+   characters is a length problem, under it is a separator or quoting problem.
 6. Use `rez-config --source-list <setting>` to prove which config file a value came from.
