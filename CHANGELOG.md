@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/loonghao/rez-skills/compare/v1.2.0...v1.3.0) (2026-10-05)
+
+
+### Features
+
+* add rez-caching, rez-package-orderers, rez-test-ci and rez-windows-platform skills ([0214a16](https://github.com/loonghao/rez-skills/commit/0214a162c996b3ee192f36ad132063ea90e0c589))
+
+
+### Bug Fixes
+
+* correct rez-memcache exit code, benchmark delta sign, orderer example, add path length ([7e9746b](https://github.com/loonghao/rez-skills/commit/7e9746bbc658c7b0810ccee8afcb11aaba7f092f))
+* correct routing tree continuation lines and a missing space ([a07cac5](https://github.com/loonghao/rez-skills/commit/a07cac5c1a69e960356aff64bbf88dceca3fda31))
+
 ## [1.2.0](https://github.com/loonghao/rez-skills/compare/v1.1.0...v1.2.0) (2026-10-01)
 
 
