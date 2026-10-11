@@ -2,5 +2,19 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "Keep the CI interpreter below 3.15. rez reads its config through RO_AttrDictWrapper.__getattr__, which raises \"'RO_AttrDictWrapper' object has no attribute 'filesystem'\" on 3.15, so every workflow step that parses the rez CLI fails there. Revisit once upstream rez ships a 3.15-compatible release.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "python",
+        "actions/python-versions"
+      ],
+      "matchCurrentVersion": ">=3.14.0",
+      "allowedVersions": "<3.15"
+    }
   ]
 }
