@@ -193,6 +193,7 @@ bump would only turn `main` red between them.
 
 ```bash
 python3 .github/scripts/validate_plugin.py --strict        # plugin + marketplace manifests, skill layout
+python3 .github/scripts/validate_skill_slug_drift.py --strict  # README slug lists vs skills/ directories
 python3 .github/scripts/validate_codex_install.py --strict # Codex installer: dry run, install, idempotency, rollback
 pip install jsonschema
 python3 .github/scripts/validate_agent_plugins_spec.py --strict  # plugin.json vs Agent Plugins 1.0.0
@@ -202,6 +203,12 @@ python3 .github/scripts/validate_skill_commands.py --strict
 
 `validate_plugin.py` checks the plugin and marketplace manifests and every skill directory under
 `skills/`.
+
+`validate_skill_slug_drift.py` compares the slug lists both READMEs write out by hand against the
+directories under `skills/`, and reports the symmetric difference — so a directory no README names
+(a listing that ships but is never installed) and a slug with no directory behind it (an install
+that resolves to nothing) both fail. Both copies are checked, because checking one leaves the other
+free to drift.
 
 `validate_agent_plugins_spec.py` validates the root `plugin.json` against the vendored Agent
 Plugins 1.0.0 schema with a real JSON Schema validator, checks that the vendored file is the
