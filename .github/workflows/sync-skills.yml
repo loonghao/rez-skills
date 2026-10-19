@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "skills/**"
+      - "README.md"
       - "plugin.json"
       - ".claude-plugin/**"
       - ".github/schemas/**"
@@ -13,6 +14,7 @@ on:
       - ".github/scripts/validate_agent_plugins_spec.py"
       - ".github/scripts/validate_skill_commands.py"
       - ".github/scripts/validate_skill_semantics.py"
+      - ".github/scripts/validate_skill_slug_drift.py"
       - ".github/scripts/validate_skill_references.py"
       - ".github/scripts/check_rez_version_drift.py"
       - "scripts/install_codex.py"
@@ -21,6 +23,7 @@ on:
     branches: [main]
     paths:
       - "skills/**"
+      - "README.md"
       - "plugin.json"
       - ".claude-plugin/**"
       - ".github/schemas/**"
@@ -29,6 +32,7 @@ on:
       - ".github/scripts/validate_agent_plugins_spec.py"
       - ".github/scripts/validate_skill_commands.py"
       - ".github/scripts/validate_skill_semantics.py"
+      - ".github/scripts/validate_skill_slug_drift.py"
       - "scripts/install_codex.py"
   release:
     types: [published]
@@ -180,6 +184,30 @@ jobs:
           set -euo pipefail
           python .github/scripts/validate_skill_semantics.py
 
+  # The READMEs enumerate the published ClawHub slugs by hand -- twice, once in
+  # the root README and once in skills/README.md -- while the canonical list is
+  # the set of directories under skills/, which is exactly what `discover` below
+  # publishes one listing per directory. Nothing tied the two halves together,
+  # so a new skills/ directory produced a listing neither README mentioned and
+  # every lane stayed green. This lane compares them as a symmetric difference,
+  # so it fires in both directions: a slug with no directory behind it, and a
+  # directory no README names. Both copies are checked; checking one leaves the
+  # other free to drift.
+  validate-skill-slug-drift:
+    name: Check README slug lists against skills/
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Compare both README slug lists against the skills/ directories
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/validate_skill_slug_drift.py --strict
+
   # The two lanes above check the commands that sit in shell fences and the
   # ones prose writes out with a flag. A *bare* `rez-<name>` in prose is
   # neither: the static lane skips it on purpose, because such a token is
@@ -267,6 +295,7 @@ jobs:
       - validate-codex-install
       - validate-skill-commands
       - validate-skill-semantics
+      - validate-skill-slug-drift
       - validate-skill-references
     if: ${{ github.event_name != 'release' || github.event.release.prerelease == false }}
     runs-on: ubuntu-latest

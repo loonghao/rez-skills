@@ -231,6 +231,12 @@ The same workflow validates the Codex installer with
 nothing, an install must land a readable `SKILL.md` at every Codex entry, re-installing must change
 nothing, and `--uninstall` must leave the skills directory empty.
 
+It also runs `.github/scripts/validate_skill_slug_drift.py --strict`, which compares the slug lists
+this file and the root `README.md` write out by hand against the directories under `skills/`. The
+comparison is a symmetric difference, so adding a directory here without naming it in both loops
+fails (a listing that ships but is never installed), and so does naming a slug with no directory
+behind it (an install that resolves to nothing).
+
 ## When Skills Activate
 
 The skills trigger when:
